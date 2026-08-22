@@ -8,6 +8,15 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<style>
+  .apps-fallback-message {
+    color: var(--green);
+    font-size: 0.65rem;
+    text-align: center;
+    min-height: 1.5em;
+    max-width: 480px;
+  }
+</style>
 </head>
 <body>
 
@@ -19,27 +28,29 @@
   <main>
     <h2 class="countdown-title">YOUR APPS 🎮</h2>
     <section class="menu-grid" aria-label="Alastair's favorite apps">
-      <a href="https://apps.apple.com/us/app/id1573196065" class="menu-btn"><span class="icon">🧱</span><span class="label">Block Craft 3D</span></a>
-      <a href="https://apps.apple.com/us/app/id1605596993" class="menu-btn"><span class="icon">🐐</span><span class="label">Goat Simulator+</span></a>
-      <a href="https://apps.apple.com/us/app/id1465231154" class="menu-btn"><span class="icon">🌋</span><span class="label">Hot Lava</span></a>
-      <a href="https://apps.apple.com/us/app/id1550866882" class="menu-btn"><span class="icon">🚀</span><span class="label">Jetpack Joyride+</span></a>
-      <a href="https://apps.apple.com/us/app/id1556957574" class="menu-btn"><span class="icon">🚀</span><span class="label">Jetpack Joyride 2</span></a>
-      <a href="https://apps.apple.com/us/app/id1668409164" class="menu-btn"><span class="icon">🚜</span><span class="label">Farming Simulator 25</span></a>
-      <a href="https://apps.apple.com/us/app/id1464268370" class="menu-btn"><span class="icon">👾</span><span class="label">Pac-Man Party Royale</span></a>
-      <a href="https://apps.apple.com/us/app/id1193508975" class="menu-btn"><span class="icon">🎨</span><span class="label">Pixicade</span></a>
-      <a href="https://apps.apple.com/us/app/id1094591345" class="menu-btn"><span class="icon">⚡</span><span class="label">Pokemon GO</span></a>
-      <a href="https://apps.apple.com/us/app/id1329898822" class="menu-btn"><span class="icon">🏰</span><span class="label">RealmCraft</span></a>
-      <a href="https://apps.apple.com/us/app/id1478928127" class="menu-btn"><span class="icon">🦶</span><span class="label">Sneaky Sasquatch</span></a>
-      <a href="https://apps.apple.com/us/app/id1536599316" class="menu-btn"><span class="icon">🐍</span><span class="label">Snake.io+</span></a>
-      <a href="https://apps.apple.com/us/app/id1560544843" class="menu-btn"><span class="icon">⭐</span><span class="label">LEGO Star Wars Castaways</span></a>
-      <a href="https://apps.apple.com/us/app/id1563718169" class="menu-btn"><span class="icon">⭐</span><span class="label">LEGO Star Wars Battles</span></a>
-      <a href="https://apps.apple.com/us/app/id1437965235" class="menu-btn"><span class="icon">🧸</span><span class="label">Duplo World+</span></a>
-      <a href="https://apps.apple.com/us/app/id1503228375" class="menu-btn"><span class="icon">🏎️</span><span class="label">Race Master 3D</span></a>
-      <a href="https://apps.apple.com/us/app/id6476391931" class="menu-btn"><span class="icon">🎭</span><span class="label">Tomb of the Mask+</span></a>
-      <a href="https://apps.apple.com/us/app/id1503575869" class="menu-btn"><span class="icon">🕵️</span><span class="label">Thief Puzzle</span></a>
-      <a href="https://apps.apple.com/us/app/id1056779323" class="menu-btn"><span class="icon">📺</span><span class="label">PBS Kids Video</span></a>
-      <a href="https://apps.apple.com/us/app/id1050401625" class="menu-btn"><span class="icon">🎮</span><span class="label">PBS Kids Games</span></a>
+      <button type="button" class="menu-btn" data-scheme="blockcraft3d://" data-name="Block Craft 3D"><span class="icon">🧱</span><span class="label">Block Craft 3D</span></button>
+      <button type="button" class="menu-btn" data-scheme="goatsimulator://" data-name="Goat Simulator+"><span class="icon">🐐</span><span class="label">Goat Simulator+</span></button>
+      <button type="button" class="menu-btn" data-scheme="hotlava://" data-name="Hot Lava"><span class="icon">🌋</span><span class="label">Hot Lava</span></button>
+      <button type="button" class="menu-btn" data-scheme="jetpackjoyride://" data-name="Jetpack Joyride+"><span class="icon">🚀</span><span class="label">Jetpack Joyride+</span></button>
+      <button type="button" class="menu-btn" data-scheme="jetpackjoyride2://" data-name="Jetpack Joyride 2"><span class="icon">🚀</span><span class="label">Jetpack Joyride 2</span></button>
+      <button type="button" class="menu-btn" data-scheme="farmsim25://" data-name="Farming Simulator 25"><span class="icon">🚜</span><span class="label">Farming Simulator 25</span></button>
+      <button type="button" class="menu-btn" data-scheme="pacman://" data-name="Pac-Man Party Royale"><span class="icon">👾</span><span class="label">Pac-Man Party Royale</span></button>
+      <button type="button" class="menu-btn" data-scheme="pixicade://" data-name="Pixicade"><span class="icon">🎨</span><span class="label">Pixicade</span></button>
+      <button type="button" class="menu-btn" data-scheme="pokemongo://" data-name="Pokemon GO"><span class="icon">⚡</span><span class="label">Pokemon GO</span></button>
+      <button type="button" class="menu-btn" data-scheme="realmcraft://" data-name="RealmCraft"><span class="icon">🏰</span><span class="label">RealmCraft</span></button>
+      <button type="button" class="menu-btn" data-scheme="sneakysasquatch://" data-name="Sneaky Sasquatch"><span class="icon">🦶</span><span class="label">Sneaky Sasquatch</span></button>
+      <button type="button" class="menu-btn" data-scheme="snakeio://" data-name="Snake.io+"><span class="icon">🐍</span><span class="label">Snake.io+</span></button>
+      <button type="button" class="menu-btn" data-scheme="legostarwarsc://" data-name="LEGO Star Wars Castaways"><span class="icon">⭐</span><span class="label">LEGO Star Wars Castaways</span></button>
+      <button type="button" class="menu-btn" data-scheme="legostarwarsb://" data-name="LEGO Star Wars Battles"><span class="icon">⭐</span><span class="label">LEGO Star Wars Battles</span></button>
+      <button type="button" class="menu-btn" data-scheme="duplo://" data-name="Duplo World+"><span class="icon">🧸</span><span class="label">Duplo World+</span></button>
+      <button type="button" class="menu-btn" data-scheme="racemaster3d://" data-name="Race Master 3D"><span class="icon">🏎️</span><span class="label">Race Master 3D</span></button>
+      <button type="button" class="menu-btn" data-scheme="tombofthemask://" data-name="Tomb of the Mask+"><span class="icon">🎭</span><span class="label">Tomb of the Mask+</span></button>
+      <button type="button" class="menu-btn" data-scheme="thiefpuzzle://" data-name="Thief Puzzle"><span class="icon">🕵️</span><span class="label">Thief Puzzle</span></button>
+      <button type="button" class="menu-btn" data-scheme="pbskids://" data-name="PBS Kids Video"><span class="icon">📺</span><span class="label">PBS Kids Video</span></button>
+      <button type="button" class="menu-btn" data-scheme="pbskidsgames://" data-name="PBS Kids Games"><span class="icon">🎮</span><span class="label">PBS Kids Games</span></button>
     </section>
+
+    <p class="apps-fallback-message" id="apps-fallback"></p>
 
     <section class="menu-grid" aria-label="Game picker">
       <a href="games/snake.html" class="menu-btn"><span class="icon">🐍</span><span class="label">Snake</span></a>
@@ -61,5 +72,43 @@
     <p class="footer-text">ALASTAIR'S WORLD</p>
   </footer>
 
+<script>
+(function () {
+  const fallbackEl = document.getElementById('apps-fallback');
+  let fallbackTimer = null;
+
+  function showFallback(appName) {
+    clearTimeout(fallbackTimer);
+    fallbackEl.textContent = `${appName}: Ask Dad to add this app! 📱`;
+    fallbackTimer = setTimeout(() => {
+      fallbackEl.textContent = '';
+    }, 4000);
+  }
+
+  function tryOpenApp(scheme, appName) {
+    let didLeave = false;
+
+    function onVisibilityChange() {
+      if (document.hidden) didLeave = true;
+    }
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.location.href = scheme;
+
+    setTimeout(() => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      if (!didLeave) {
+        showFallback(appName);
+      }
+    }, 1800);
+  }
+
+  document.querySelectorAll('[data-scheme]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      tryOpenApp(btn.dataset.scheme, btn.dataset.name);
+    });
+  });
+})();
+</script>
 </body>
 </html>
