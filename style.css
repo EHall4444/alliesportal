@@ -85,27 +85,16 @@ main {
 
 .pixel-panel {
   position: relative;
-  background: var(--panel);
+  border: var(--border) solid transparent;
+  background:
+    linear-gradient(var(--panel), var(--panel)) padding-box,
+    linear-gradient(var(--gold), var(--gold)) border-box;
   clip-path: polygon(
     0 var(--step), var(--step) var(--step), var(--step) 0,
     calc(100% - var(--step)) 0, calc(100% - var(--step)) var(--step), 100% var(--step),
     100% calc(100% - var(--step)), calc(100% - var(--step)) calc(100% - var(--step)), calc(100% - var(--step)) 100%,
     var(--step) 100%, var(--step) calc(100% - var(--step)), 0 calc(100% - var(--step))
   );
-}
-
-.pixel-panel::before {
-  content: "";
-  position: absolute;
-  inset: calc(var(--border) * -1);
-  background: var(--gold);
-  clip-path: polygon(
-    0 var(--step), var(--step) var(--step), var(--step) 0,
-    calc(100% - var(--step)) 0, calc(100% - var(--step)) var(--step), 100% var(--step),
-    100% calc(100% - var(--step)), calc(100% - var(--step)) calc(100% - var(--step)), calc(100% - var(--step)) 100%,
-    var(--step) 100%, var(--step) calc(100% - var(--step)), 0 calc(100% - var(--step))
-  );
-  z-index: -1;
 }
 
 /* ---------- Countdown ---------- */
@@ -142,8 +131,9 @@ main {
 }
 
 .countdown-next-name {
-  color: var(--bg);
+  color: var(--gold);
   font-size: clamp(0.8rem, 3vw, 1.1rem);
+  text-shadow: 0 0 4px rgba(255, 204, 51, 0.5);
   text-transform: uppercase;
 }
 
@@ -177,8 +167,9 @@ main {
 }
 
 .countdown-next-detail {
-  color: var(--bg);
+  color: var(--green);
   font-size: 0.6rem;
+  text-shadow: 0 0 4px rgba(57, 255, 106, 0.5);
   min-height: 1em;
   margin: 4px 0 0;
 }
@@ -227,7 +218,6 @@ main {
 
 .menu-btn {
   position: relative;
-  background: var(--panel);
   color: var(--text);
   text-decoration: none;
   display: flex;
@@ -240,37 +230,24 @@ main {
   font-size: 0.7rem;
   line-height: 1.5;
   transition: transform 0.1s ease, background 0.15s ease;
+  border: var(--border) solid transparent;
+  background:
+    linear-gradient(var(--panel), var(--panel)) padding-box,
+    linear-gradient(var(--gold), var(--gold)) border-box;
   clip-path: polygon(
     0 var(--step), var(--step) var(--step), var(--step) 0,
     calc(100% - var(--step)) 0, calc(100% - var(--step)) var(--step), 100% var(--step),
     100% calc(100% - var(--step)), calc(100% - var(--step)) calc(100% - var(--step)), calc(100% - var(--step)) 100%,
     var(--step) 100%, var(--step) calc(100% - var(--step)), 0 calc(100% - var(--step))
   );
-}
-
-.menu-btn::before {
-  content: "";
-  position: absolute;
-  inset: calc(var(--border) * -1);
-  background: var(--gold);
-  clip-path: polygon(
-    0 var(--step), var(--step) var(--step), var(--step) 0,
-    calc(100% - var(--step)) 0, calc(100% - var(--step)) var(--step), 100% var(--step),
-    100% calc(100% - var(--step)), calc(100% - var(--step)) calc(100% - var(--step)), calc(100% - var(--step)) 100%,
-    var(--step) 100%, var(--step) calc(100% - var(--step)), 0 calc(100% - var(--step))
-  );
-  z-index: -1;
 }
 
 .menu-btn:hover,
 .menu-btn:focus-visible {
-  background: var(--panel-light);
+  background:
+    linear-gradient(var(--panel-light), var(--panel-light)) padding-box,
+    linear-gradient(var(--green), var(--green)) border-box;
   transform: translate(-2px, -2px);
-}
-
-.menu-btn:hover::before,
-.menu-btn:focus-visible::before {
-  background: var(--green);
 }
 
 .menu-btn:active {
@@ -307,7 +284,6 @@ main {
 
 .crew-card {
   position: relative;
-  background: var(--panel);
   color: var(--text);
   text-decoration: none;
   display: flex;
@@ -319,37 +295,24 @@ main {
   font-size: 0.55rem;
   line-height: 1.4;
   transition: transform 0.1s ease, background 0.15s ease;
+  border: 3px solid transparent;
+  background:
+    linear-gradient(var(--panel), var(--panel)) padding-box,
+    linear-gradient(var(--green), var(--green)) border-box;
   clip-path: polygon(
     0 6px, 6px 6px, 6px 0,
     calc(100% - 6px) 0, calc(100% - 6px) 6px, 100% 6px,
     100% calc(100% - 6px), calc(100% - 6px) calc(100% - 6px), calc(100% - 6px) 100%,
     6px 100%, 6px calc(100% - 6px), 0 calc(100% - 6px)
   );
-}
-
-.crew-card::before {
-  content: "";
-  position: absolute;
-  inset: -3px;
-  background: var(--green);
-  clip-path: polygon(
-    0 6px, 6px 6px, 6px 0,
-    calc(100% - 6px) 0, calc(100% - 6px) 6px, 100% 6px,
-    100% calc(100% - 6px), calc(100% - 6px) calc(100% - 6px), calc(100% - 6px) 100%,
-    6px 100%, 6px calc(100% - 6px), 0 calc(100% - 6px)
-  );
-  z-index: -1;
 }
 
 .crew-card:hover,
 .crew-card:focus-visible {
-  background: var(--panel-light);
+  background:
+    linear-gradient(var(--panel-light), var(--panel-light)) padding-box,
+    linear-gradient(var(--gold), var(--gold)) border-box;
   transform: translate(-2px, -2px);
-}
-
-.crew-card:hover::before,
-.crew-card:focus-visible::before {
-  background: var(--gold);
 }
 
 .crew-icon {

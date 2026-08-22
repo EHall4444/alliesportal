@@ -71,10 +71,8 @@
 
 .game-btn {
   position: relative;
-  background: var(--panel);
   color: var(--text);
   text-decoration: none;
-  border: none;
   font-family: 'Press Start 2P', monospace;
   display: inline-flex;
   align-items: center;
@@ -83,34 +81,22 @@
   padding: 14px 20px;
   font-size: 0.6rem;
   cursor: pointer;
+  border: var(--border) solid transparent;
+  background:
+    linear-gradient(var(--panel), var(--panel)) padding-box,
+    linear-gradient(var(--gold), var(--gold)) border-box;
   clip-path: polygon(
     0 var(--step), var(--step) var(--step), var(--step) 0,
     calc(100% - var(--step)) 0, calc(100% - var(--step)) var(--step), 100% var(--step),
     100% calc(100% - var(--step)), calc(100% - var(--step)) calc(100% - var(--step)), calc(100% - var(--step)) 100%,
     var(--step) 100%, var(--step) calc(100% - var(--step)), 0 calc(100% - var(--step))
   );
-}
-
-.game-btn::before {
-  content: "";
-  position: absolute;
-  inset: calc(var(--border) * -1);
-  background: var(--gold);
-  clip-path: polygon(
-    0 var(--step), var(--step) var(--step), var(--step) 0,
-    calc(100% - var(--step)) 0, calc(100% - var(--step)) var(--step), 100% var(--step),
-    100% calc(100% - var(--step)), calc(100% - var(--step)) calc(100% - var(--step)), calc(100% - var(--step)) 100%,
-    var(--step) 100%, var(--step) calc(100% - var(--step)), 0 calc(100% - var(--step))
-  );
-  z-index: -1;
 }
 
 .game-btn:hover, .game-btn:focus-visible {
-  background: var(--panel-light);
-}
-
-.game-btn:hover::before, .game-btn:focus-visible::before {
-  background: var(--green);
+  background:
+    linear-gradient(var(--panel-light), var(--panel-light)) padding-box,
+    linear-gradient(var(--green), var(--green)) border-box;
 }
 
 .game-btn:disabled {
@@ -119,11 +105,9 @@
 }
 
 .game-btn:disabled:hover {
-  background: var(--panel);
-}
-
-.game-btn:disabled:hover::before {
-  background: var(--gold);
+  background:
+    linear-gradient(var(--panel), var(--panel)) padding-box,
+    linear-gradient(var(--gold), var(--gold)) border-box;
 }
 
 .dpad {
