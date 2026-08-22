@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Making & Learning - Alastair's Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .learn-main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    width: 100%;
+  }
+
+  .gate-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 32px 20px;
+    width: 100%;
+    max-width: 480px;
+    text-align: center;
+  }
+
+  .gate-prompt {
+    color: var(--gold);
+    font-size: clamp(0.75rem, 3vw, 1rem);
+    line-height: 1.6;
+  }
+
+  .gate-picture {
+    font-size: 4rem;
+    line-height: 1;
+  }
+
+  .gate-message {
+    color: var(--green);
+    font-size: 0.65rem;
+    min-height: 1.5em;
+  }
+
+  .letter-slots {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+  }
+
+  .letter-slot {
+    width: 44px;
+    height: 52px;
+    border: 3px solid var(--green);
+    background: var(--panel-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 1.2rem;
+    color: var(--gold);
+  }
+
+  .letter-pool, .answer-pool {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+  }
+
+  .letter-btn, .answer-btn {
+    font-family: 'Press Start 2P', monospace;
+    background: var(--panel);
+    color: var(--gold);
+    border: 3px solid var(--gold);
+    font-size: 1rem;
+    padding: 12px 14px;
+    cursor: pointer;
+  }
+
+  .letter-btn:hover, .answer-btn:hover {
+    background: var(--panel-light);
+  }
+
+  .letter-btn:disabled {
+    opacity: 0.25;
+    cursor: default;
+  }
+
+  .answer-btn {
+    font-size: 1.3rem;
+    padding: 16px 22px;
+    color: var(--green);
+    border-color: var(--green);
+  }
+
+  .math-row {
+    font-size: clamp(1.4rem, 7vw, 2.2rem);
+    line-height: 1.4;
+  }
+
+  .math-row .faded {
+    opacity: 0.3;
+  }
+
+  .clear-btn {
+    color: var(--green);
+    font-size: 0.55rem;
+    text-decoration: underline;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: 'Press Start 2P', monospace;
+  }
+
+  .apps-section {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    width: 100%;
+  }
+
+  .apps-section.revealed {
+    display: flex;
+  }
+
+  .apps-title {
+    color: var(--gold);
+    font-size: clamp(0.9rem, 3.5vw, 1.3rem);
+    text-shadow: 0 0 6px rgba(255, 204, 51, 0.6);
+    text-align: center;
+  }
+
+  .app-card {
+    text-decoration: none;
+  }
+
+  .app-card .builtin-note {
+    color: var(--green);
+    font-size: 0.5rem;
+  }
+
+  .confetti-piece {
+    position: fixed;
+    top: -10vh;
+    pointer-events: none;
+    z-index: 999;
+    animation-name: confetti-fall;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+  }
+
+  @keyframes confetti-fall {
+    from { transform: translateY(0) rotate(0deg); opacity: 1; }
+    to { transform: translateY(120vh) rotate(360deg); opacity: 0.9; }
+  }
+</style>
+</head>
+<body>
+
+  <header class="site-header">
+    <h1 class="title">🌟 MAKING &amp; LEARNING<span class="cursor">_</span></h1>
+    <p class="subtitle">SOLVE THE PUZZLE TO UNLOCK</p>
+  </header>
+
+  <main class="learn-main">
+    <section class="gate-card pixel-panel" id="gate">
+      <p class="gate-prompt" id="gate-prompt">Loading...</p>
+      <div class="gate-picture" id="gate-picture"></div>
+      <div id="challenge-area"></div>
+      <p class="gate-message" id="gate-message"></p>
+    </section>
+
+    <section class="apps-section" id="apps-section" aria-label="Unlocked apps">
+      <h2 class="apps-title">YOU UNLOCKED THE APPS! 🎉</h2>
+      <div class="menu-grid" id="apps-grid"></div>
+    </section>
+
+    <a href="index.html" class="menu-btn" style="max-width:280px;"><span class="icon">⬅</span><span class="label">Back to Portal</span></a>
+  </main>
+
+  <footer class="site-footer">
+    <p class="footer-text">ALASTAIR'S WORLD</p>
+  </footer>
+
+<script>
+(function () {
+  const SPELLING_WORDS = [
+    { word: 'CAT', emoji: '🐱' },
+    { word: 'DOG', emoji: '🐶' },
+    { word: 'SUN', emoji: '☀️' },
+    { word: 'HAT', emoji: '🎩' },
+    { word: 'PIG', emoji: '🐷' },
+    { word: 'BUG', emoji: '🐛' },
+    { word: 'BEE', emoji: '🐝' },
+    { word: 'FOX', emoji: '🦊' },
+    { word: 'BOX', emoji: '📦' },
+    { word: 'HEN', emoji: '🐔' },
+    { word: 'COW', emoji: '🐮' },
+    { word: 'OWL', emoji: '🦉' },
+  ];
+
+  const MATH_QUESTIONS = [
+    { a: 3, b: 2, op: '+', emoji: '🍎' },
+    { a: 4, b: 1, op: '+', emoji: '🍇' },
+    { a: 2, b: 2, op: '+', emoji: '🍊' },
+    { a: 5, b: 3, op: '+', emoji: '🍓' },
+    { a: 3, b: 3, op: '+', emoji: '🍋' },
+    { a: 6, b: 1, op: '+', emoji: '🍌' },
+    { a: 6, b: 2, op: '-', emoji: '🎈' },
+    { a: 7, b: 3, op: '-', emoji: '🎈' },
+    { a: 8, b: 5, op: '-', emoji: '⭐' },
+    { a: 9, b: 4, op: '-', emoji: '⭐' },
+    { a: 10, b: 6, op: '-', emoji: '🍪' },
+    { a: 5, b: 2, op: '-', emoji: '🍪' },
+  ];
+
+  const APPS = [
+    { name: 'Tayasui Sketches', emoji: '🎨', url: 'https://apps.apple.com/app/id419235501' },
+    { name: 'Stop Motion Studio', emoji: '🎬', url: 'https://apps.apple.com/app/id441651678' },
+    { name: 'Endless Alphabet', emoji: '🔤', url: 'https://apps.apple.com/app/id526358089' },
+    { name: 'Stack the States', emoji: '🗺️', url: 'https://apps.apple.com/app/id381342267' },
+    { name: 'Loopimal', emoji: '🎵', url: 'https://apps.apple.com/app/id902952979' },
+    { name: 'GarageBand', emoji: '🎸', url: null },
+    { name: 'ScratchJr', emoji: '💻', url: 'https://apps.apple.com/app/id895485086' },
+    { name: 'Toca Life World', emoji: '🌍', url: 'https://apps.apple.com/app/id1121586562' },
+    { name: 'Zmoji', emoji: '😎', url: 'https://apps.apple.com/app/id1215995765' },
+    { name: 'Duolingo ABC', emoji: '🦉', url: 'https://apps.apple.com/app/id1440502568' },
+    { name: 'Prodigy Math', emoji: '➕', url: 'https://apps.apple.com/app/id950795204' },
+  ];
+
+  const ENCOURAGEMENTS = [
+    'Almost! Try again! 💪',
+    'So close! Give it another shot! 🌈',
+    'Not quite — you can do it! ⭐',
+    'Keep trying, superstar! ✨',
+    'Nice try! One more time! 🚀',
+  ];
+
+  const promptEl = document.getElementById('gate-prompt');
+  const pictureEl = document.getElementById('gate-picture');
+  const challengeArea = document.getElementById('challenge-area');
+  const messageEl = document.getElementById('gate-message');
+  const gateEl = document.getElementById('gate');
+  const appsSection = document.getElementById('apps-section');
+  const appsGrid = document.getElementById('apps-grid');
+
+  function pick(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+
+  function shuffle(arr) {
+    const copy = arr.slice();
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  }
+
+  function randomLetter(exclude) {
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    let letter;
+    do {
+      letter = alphabet[Math.floor(Math.random() * alphabet.length)];
+    } while (exclude.includes(letter));
+    return letter;
+  }
+
+  function showEncouragement() {
+    messageEl.textContent = pick(ENCOURAGEMENTS);
+  }
+
+  function setupSpellingChallenge() {
+    const { word, emoji } = pick(SPELLING_WORDS);
+    promptEl.textContent = `Can you spell ${word}?`;
+    pictureEl.textContent = emoji;
+
+    const decoys = [randomLetter(word), randomLetter(word)];
+    const pool = shuffle(word.split('').concat(decoys));
+    let attempt = [];
+
+    challengeArea.innerHTML = `
+      <div class="letter-slots" id="letter-slots"></div>
+      <div class="letter-pool" id="letter-pool" style="margin-top:16px;"></div>
+      <button class="clear-btn" id="clear-btn" style="margin-top:12px;">Clear</button>
+    `;
+
+    const slotsEl = document.getElementById('letter-slots');
+    const poolEl = document.getElementById('letter-pool');
+    const clearBtn = document.getElementById('clear-btn');
+
+    function renderSlots() {
+      slotsEl.innerHTML = '';
+      for (let i = 0; i < word.length; i++) {
+        const slot = document.createElement('div');
+        slot.className = 'letter-slot';
+        slot.textContent = attempt[i] || '';
+        slotsEl.appendChild(slot);
+      }
+    }
+
+    const usedIndices = new Set();
+
+    function renderPool() {
+      poolEl.innerHTML = '';
+      pool.forEach((letter, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'letter-btn';
+        btn.textContent = letter;
+        btn.disabled = usedIndices.has(i);
+        btn.addEventListener('click', () => handleLetterClick(letter, i, btn));
+        poolEl.appendChild(btn);
+      });
+    }
+
+    function handleLetterClick(letter, i, btn) {
+      if (attempt.length >= word.length || usedIndices.has(i)) return;
+      attempt.push(letter);
+      usedIndices.add(i);
+      btn.disabled = true;
+      renderSlots();
+
+      if (attempt.length === word.length) {
+        if (attempt.join('') === word) {
+          celebrate();
+        } else {
+          showEncouragement();
+          setTimeout(() => {
+            attempt = [];
+            usedIndices.clear();
+            renderSlots();
+            renderPool();
+            messageEl.textContent = '';
+          }, 900);
+        }
+      }
+    }
+
+    clearBtn.addEventListener('click', () => {
+      attempt = [];
+      usedIndices.clear();
+      renderSlots();
+      renderPool();
+      messageEl.textContent = '';
+    });
+
+    renderSlots();
+    renderPool();
+  }
+
+  function setupMathChallenge() {
+    const q = pick(MATH_QUESTIONS);
+    const answer = q.op === '+' ? q.a + q.b : q.a - q.b;
+    promptEl.textContent = 'What is the answer?';
+    pictureEl.textContent = '';
+
+    const groupA = q.emoji.repeat(q.a);
+    const groupB = q.op === '+'
+      ? q.emoji.repeat(q.b)
+      : `<span class="faded">${q.emoji.repeat(q.b)}</span>`;
+
+    const distractors = new Set();
+    while (distractors.size < 3) {
+      const offset = Math.floor(Math.random() * 5) - 2;
+      const candidate = answer + offset;
+      if (candidate >= 0 && candidate !== answer) distractors.add(candidate);
+    }
+
+    const choices = shuffle([answer, ...distractors]);
+
+    challengeArea.innerHTML = `
+      <div class="math-row">${groupA} ${q.op === '+' ? '+' : '−'} ${groupB} = ?</div>
+      <div class="answer-pool" style="margin-top:20px;">
+        ${choices.map((c) => `<button class="answer-btn" data-value="${c}">${c}</button>`).join('')}
+      </div>
+    `;
+
+    challengeArea.querySelectorAll('.answer-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (Number(btn.dataset.value) === answer) {
+          celebrate();
+        } else {
+          showEncouragement();
+        }
+      });
+    });
+  }
+
+  function rainConfetti() {
+    const pieces = ['⭐', '✨', '🎉', '🎊', '💛', '💚'];
+    for (let i = 0; i < 50; i++) {
+      const el = document.createElement('span');
+      el.className = 'confetti-piece';
+      el.textContent = pick(pieces);
+      el.style.left = `${Math.random() * 100}vw`;
+      el.style.fontSize = `${1 + Math.random() * 1.5}rem`;
+      const duration = 2 + Math.random() * 2;
+      el.style.animationDuration = `${duration}s`;
+      el.style.animationDelay = `${Math.random() * 1}s`;
+      el.addEventListener('animationend', () => el.remove());
+      document.body.appendChild(el);
+    }
+  }
+
+  function celebrate() {
+    messageEl.textContent = "YOU DID IT! 🎉";
+    rainConfetti();
+    setTimeout(() => {
+      gateEl.style.display = 'none';
+      renderApps();
+      appsSection.classList.add('revealed');
+    }, 1400);
+  }
+
+  function renderApps() {
+    appsGrid.innerHTML = '';
+    APPS.forEach((app) => {
+      if (app.url) {
+        const a = document.createElement('a');
+        a.href = app.url;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.className = 'menu-btn app-card';
+        a.innerHTML = `<span class="icon">${app.emoji}</span><span class="label">${app.name}</span>`;
+        appsGrid.appendChild(a);
+      } else {
+        const div = document.createElement('div');
+        div.className = 'menu-btn app-card';
+        div.innerHTML = `<span class="icon">${app.emoji}</span><span class="label">${app.name}</span><span class="builtin-note">Already on your iPad!</span>`;
+        appsGrid.appendChild(div);
+      }
+    });
+  }
+
+  function startGate() {
+    if (Math.random() < 0.5) {
+      setupSpellingChallenge();
+    } else {
+      setupMathChallenge();
+    }
+  }
+
+  startGate();
+})();
+</script>
+</body>
+</html>
