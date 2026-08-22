@@ -8,27 +8,221 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="games.css">
 </head>
 <body>
 
   <header class="site-header">
-    <h1 class="title">🏓 Pong<span class="cursor">_</span></h1>
-    <p class="subtitle">LOADING CARTRIDGE...</p>
+    <h1 class="title">🏓 PONG<span class="cursor">_</span></h1>
+    <p class="subtitle">FIRST TO 5 WINS</p>
   </header>
 
-  <main>
-    <div class="countdown-next pixel-panel" style="max-width:480px; margin:0 auto;">
-      <span class="countdown-next-icon">🚧</span>
-      <span class="countdown-next-name">COMING SOON</span>
-      <p class="countdown-next-detail">Pong is still being built. Check back soon, Player 1!</p>
+  <main class="game-main">
+    <div class="game-score-row">
+      <span>YOU<span class="value" id="score-player">0</span></span>
+      <span>CPU<span class="value" id="score-cpu">0</span></span>
     </div>
 
-    <a href="index.html" class="menu-btn" style="max-width:280px; margin:32px auto 0;"><span class="icon">⬅</span><span class="label">Back to Games</span></a>
+    <div class="game-stage">
+      <div class="game-canvas-frame pixel-panel">
+        <canvas id="game" width="480" height="320"></canvas>
+      </div>
+
+      <div class="game-overlay" id="overlay">
+        <h2 id="overlay-title">PRESS START</h2>
+        <p id="overlay-message">Drag, touch, or use arrows to move your paddle.</p>
+        <button class="game-btn" id="start-btn">START GAME</button>
+      </div>
+    </div>
+
+    <p class="game-instructions">Move your mouse/finger over the board, or use Up/Down (W/S) keys, to control the left paddle.</p>
+
+    <a href="../index.html" class="game-btn back-portal">⬅ Back to Portal</a>
   </main>
 
   <footer class="site-footer">
     <p class="footer-text">ALASTAIR'S WORLD</p>
   </footer>
 
+<script>
+(function () {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+
+  const PADDLE_W = 10;
+  const PADDLE_H = 60;
+  const WIN_SCORE = 5;
+
+  const scorePlayerEl = document.getElementById('score-player');
+  const scoreCpuEl = document.getElementById('score-cpu');
+  const overlay = document.getElementById('overlay');
+  const overlayTitle = document.getElementById('overlay-title');
+  const overlayMessage = document.getElementById('overlay-message');
+  const startBtn = document.getElementById('start-btn');
+
+  let playerY, cpuY, ball, scorePlayer, scoreCpu, running, rafHandle, keyUp, keyDown;
+
+  function resetBall(direction) {
+    ball = {
+      x: W / 2,
+      y: H / 2,
+      vx: 4 * direction,
+      vy: (Math.random() * 4 - 2) || 2,
+    };
+  }
+
+  function resetState() {
+    playerY = H / 2 - PADDLE_H / 2;
+    cpuY = H / 2 - PADDLE_H / 2;
+    scorePlayer = 0;
+    scoreCpu = 0;
+    scorePlayerEl.textContent = scorePlayer;
+    scoreCpuEl.textContent = scoreCpu;
+    resetBall(Math.random() < 0.5 ? 1 : -1);
+  }
+
+  function draw() {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.strokeStyle = 'rgba(255,204,51,0.4)';
+    ctx.setLineDash([6, 10]);
+    ctx.beginPath();
+    ctx.moveTo(W / 2, 0);
+    ctx.lineTo(W / 2, H);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = '#ffcc33';
+    ctx.fillRect(10, playerY, PADDLE_W, PADDLE_H);
+    ctx.fillRect(W - 10 - PADDLE_W, cpuY, PADDLE_W, PADDLE_H);
+
+    ctx.fillStyle = '#39ff6a';
+    ctx.shadowColor = '#39ff6a';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  function update() {
+    if (keyUp) playerY -= 6;
+    if (keyDown) playerY += 6;
+    playerY = Math.max(0, Math.min(H - PADDLE_H, playerY));
+
+    const cpuCenter = cpuY + PADDLE_H / 2;
+    const cpuSpeed = 4;
+    if (cpuCenter < ball.y - 10) cpuY += cpuSpeed;
+    else if (cpuCenter > ball.y + 10) cpuY -= cpuSpeed;
+    cpuY = Math.max(0, Math.min(H - PADDLE_H, cpuY));
+
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+
+    if (ball.y <= 6 || ball.y >= H - 6) {
+      ball.vy *= -1;
+    }
+
+    if (
+      ball.vx < 0 &&
+      ball.x - 6 <= 10 + PADDLE_W &&
+      ball.y >= playerY &&
+      ball.y <= playerY + PADDLE_H
+    ) {
+      ball.vx = Math.min(9, Math.abs(ball.vx) * 1.05);
+      const hitPos = (ball.y - (playerY + PADDLE_H / 2)) / (PADDLE_H / 2);
+      ball.vy = hitPos * 5;
+    }
+
+    if (
+      ball.vx > 0 &&
+      ball.x + 6 >= W - 10 - PADDLE_W &&
+      ball.y >= cpuY &&
+      ball.y <= cpuY + PADDLE_H
+    ) {
+      ball.vx = -Math.min(9, Math.abs(ball.vx) * 1.05);
+      const hitPos = (ball.y - (cpuY + PADDLE_H / 2)) / (PADDLE_H / 2);
+      ball.vy = hitPos * 5;
+    }
+
+    if (ball.x < 0) {
+      scoreCpu += 1;
+      scoreCpuEl.textContent = scoreCpu;
+      checkWinOrContinue(-1);
+    } else if (ball.x > W) {
+      scorePlayer += 1;
+      scorePlayerEl.textContent = scorePlayer;
+      checkWinOrContinue(1);
+    }
+  }
+
+  function checkWinOrContinue(nextDirection) {
+    if (scorePlayer >= WIN_SCORE || scoreCpu >= WIN_SCORE) {
+      gameOver(scorePlayer > scoreCpu);
+    } else {
+      resetBall(nextDirection);
+    }
+  }
+
+  function loop() {
+    if (!running) return;
+    update();
+    draw();
+    rafHandle = requestAnimationFrame(loop);
+  }
+
+  function gameOver(playerWon) {
+    running = false;
+    cancelAnimationFrame(rafHandle);
+    overlayTitle.textContent = playerWon ? 'YOU WIN!' : 'COMPUTER WINS';
+    overlayMessage.textContent = `Final score — You: ${scorePlayer}  CPU: ${scoreCpu}`;
+    startBtn.textContent = 'PLAY AGAIN';
+    overlay.classList.remove('hidden');
+  }
+
+  function startGame() {
+    resetState();
+    draw();
+    overlay.classList.add('hidden');
+    running = true;
+    rafHandle = requestAnimationFrame(loop);
+  }
+
+  function pointerToY(clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const scale = H / rect.height;
+    return (clientY - rect.top) * scale;
+  }
+
+  canvas.addEventListener('mousemove', (e) => {
+    if (!running) return;
+    playerY = pointerToY(e.clientY) - PADDLE_H / 2;
+  });
+
+  canvas.addEventListener('touchmove', (e) => {
+    if (!running) return;
+    e.preventDefault();
+    playerY = pointerToY(e.touches[0].clientY) - PADDLE_H / 2;
+  }, { passive: false });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'ArrowUp' || e.code === 'KeyW') { keyUp = true; e.preventDefault(); }
+    if (e.code === 'ArrowDown' || e.code === 'KeyS') { keyDown = true; e.preventDefault(); }
+  });
+
+  document.addEventListener('keyup', (e) => {
+    if (e.code === 'ArrowUp' || e.code === 'KeyW') keyUp = false;
+    if (e.code === 'ArrowDown' || e.code === 'KeyS') keyDown = false;
+  });
+
+  startBtn.addEventListener('click', startGame);
+
+  resetState();
+  draw();
+})();
+</script>
 </body>
 </html>

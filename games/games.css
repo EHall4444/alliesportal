@@ -1,0 +1,160 @@
+/* Shared styles for individual game pages */
+
+.game-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  width: 100%;
+}
+
+.game-score-row {
+  display: flex;
+  gap: 32px;
+  justify-content: center;
+  font-size: 0.7rem;
+  color: var(--gold);
+}
+
+.game-score-row .value {
+  color: var(--green);
+  margin-left: 8px;
+}
+
+.game-stage {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+}
+
+.game-canvas-frame {
+  padding: 10px;
+}
+
+.game-canvas-frame canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #000;
+  image-rendering: pixelated;
+}
+
+.game-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 13, 10, 0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  text-align: center;
+  padding: 20px;
+}
+
+.game-overlay.hidden {
+  display: none;
+}
+
+.game-overlay h2 {
+  color: var(--gold);
+  font-size: clamp(0.8rem, 3vw, 1.1rem);
+  text-shadow: 0 0 6px rgba(255, 204, 51, 0.6);
+  margin: 0;
+}
+
+.game-overlay p {
+  color: var(--green);
+  font-size: 0.6rem;
+  margin: 0;
+}
+
+.game-btn {
+  position: relative;
+  background: var(--panel);
+  color: var(--text);
+  text-decoration: none;
+  border: none;
+  font-family: 'Press Start 2P', monospace;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 20px;
+  font-size: 0.6rem;
+  cursor: pointer;
+  clip-path: polygon(
+    0 var(--step), var(--step) var(--step), var(--step) 0,
+    calc(100% - var(--step)) 0, calc(100% - var(--step)) var(--step), 100% var(--step),
+    100% calc(100% - var(--step)), calc(100% - var(--step)) calc(100% - var(--step)), calc(100% - var(--step)) 100%,
+    var(--step) 100%, var(--step) calc(100% - var(--step)), 0 calc(100% - var(--step))
+  );
+}
+
+.game-btn::before {
+  content: "";
+  position: absolute;
+  inset: calc(var(--border) * -1);
+  background: var(--gold);
+  clip-path: polygon(
+    0 var(--step), var(--step) var(--step), var(--step) 0,
+    calc(100% - var(--step)) 0, calc(100% - var(--step)) var(--step), 100% var(--step),
+    100% calc(100% - var(--step)), calc(100% - var(--step)) calc(100% - var(--step)), calc(100% - var(--step)) 100%,
+    var(--step) 100%, var(--step) calc(100% - var(--step)), 0 calc(100% - var(--step))
+  );
+  z-index: -1;
+}
+
+.game-btn:hover, .game-btn:focus-visible {
+  background: var(--panel-light);
+}
+
+.game-btn:hover::before, .game-btn:focus-visible::before {
+  background: var(--green);
+}
+
+.dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 52px);
+  grid-template-rows: repeat(3, 52px);
+  gap: 6px;
+  justify-content: center;
+}
+
+.dpad button {
+  font-family: 'Press Start 2P', monospace;
+  background: var(--panel-light);
+  color: var(--gold);
+  border: 2px solid var(--gold);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.dpad button:active {
+  background: var(--green);
+  color: var(--bg);
+}
+
+.dpad .dpad-up { grid-column: 2; grid-row: 1; }
+.dpad .dpad-left { grid-column: 1; grid-row: 2; }
+.dpad .dpad-right { grid-column: 3; grid-row: 2; }
+.dpad .dpad-down { grid-column: 2; grid-row: 3; }
+
+.game-instructions {
+  color: var(--green);
+  font-size: 0.55rem;
+  text-align: center;
+  max-width: 480px;
+  line-height: 1.6;
+}
+
+.back-portal {
+  margin-top: 8px;
+}
+
+@media (max-width: 480px) {
+  .game-score-row {
+    gap: 20px;
+    font-size: 0.6rem;
+  }
+}

@@ -8,27 +8,200 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="games.css">
 </head>
 <body>
 
   <header class="site-header">
-    <h1 class="title">🐍 Snake<span class="cursor">_</span></h1>
-    <p class="subtitle">LOADING CARTRIDGE...</p>
+    <h1 class="title">🐍 SNAKE<span class="cursor">_</span></h1>
+    <p class="subtitle">EAT. GROW. DON'T CRASH.</p>
   </header>
 
-  <main>
-    <div class="countdown-next pixel-panel" style="max-width:480px; margin:0 auto;">
-      <span class="countdown-next-icon">🚧</span>
-      <span class="countdown-next-name">COMING SOON</span>
-      <p class="countdown-next-detail">Snake is still being built. Check back soon, Player 1!</p>
+  <main class="game-main">
+    <div class="game-score-row">
+      <span>SCORE<span class="value" id="score">0</span></span>
+      <span>BEST<span class="value" id="high-score">0</span></span>
     </div>
 
-    <a href="index.html" class="menu-btn" style="max-width:280px; margin:32px auto 0;"><span class="icon">⬅</span><span class="label">Back to Games</span></a>
+    <div class="game-stage">
+      <div class="game-canvas-frame pixel-panel">
+        <canvas id="game" width="400" height="400"></canvas>
+      </div>
+
+      <div class="game-overlay" id="overlay">
+        <h2 id="overlay-title">PRESS START</h2>
+        <p id="overlay-message">Use arrows / WASD to move.</p>
+        <button class="game-btn" id="start-btn">START GAME</button>
+      </div>
+    </div>
+
+    <div class="dpad" aria-label="Movement controls">
+      <button class="dpad-up" data-dir="up" aria-label="Up">▲</button>
+      <button class="dpad-left" data-dir="left" aria-label="Left">◀</button>
+      <button class="dpad-right" data-dir="right" aria-label="Right">▶</button>
+      <button class="dpad-down" data-dir="down" aria-label="Down">▼</button>
+    </div>
+
+    <p class="game-instructions">Arrow keys or WASD on desktop. Tap the pad on mobile.</p>
+
+    <a href="../index.html" class="game-btn back-portal">⬅ Back to Portal</a>
   </main>
 
   <footer class="site-footer">
     <p class="footer-text">ALASTAIR'S WORLD</p>
   </footer>
 
+<script>
+(function () {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const GRID = 20;
+  const CELL = canvas.width / GRID;
+
+  const scoreEl = document.getElementById('score');
+  const highScoreEl = document.getElementById('high-score');
+  const overlay = document.getElementById('overlay');
+  const overlayTitle = document.getElementById('overlay-title');
+  const overlayMessage = document.getElementById('overlay-message');
+  const startBtn = document.getElementById('start-btn');
+
+  const HIGH_SCORE_KEY = 'alliesportal-snake-highscore';
+  let highScore = Number(localStorage.getItem(HIGH_SCORE_KEY)) || 0;
+  highScoreEl.textContent = highScore;
+
+  let snake, direction, nextDirection, food, score, tickMs, loopHandle, running;
+
+  function randomFood() {
+    let pos;
+    do {
+      pos = {
+        x: Math.floor(Math.random() * GRID),
+        y: Math.floor(Math.random() * GRID),
+      };
+    } while (snake.some((s) => s.x === pos.x && s.y === pos.y));
+    return pos;
+  }
+
+  function resetState() {
+    snake = [
+      { x: 9, y: 10 },
+      { x: 8, y: 10 },
+      { x: 7, y: 10 },
+    ];
+    direction = 'right';
+    nextDirection = 'right';
+    score = 0;
+    tickMs = 140;
+    scoreEl.textContent = score;
+    food = randomFood();
+  }
+
+  function draw() {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = '#ffcc33';
+    ctx.shadowColor = '#ffcc33';
+    ctx.shadowBlur = 8;
+    ctx.fillRect(food.x * CELL + 2, food.y * CELL + 2, CELL - 4, CELL - 4);
+    ctx.shadowBlur = 0;
+
+    snake.forEach((seg, i) => {
+      ctx.fillStyle = i === 0 ? '#7dffa0' : '#39ff6a';
+      ctx.fillRect(seg.x * CELL + 1, seg.y * CELL + 1, CELL - 2, CELL - 2);
+    });
+  }
+
+  function step() {
+    direction = nextDirection;
+    const head = { ...snake[0] };
+
+    if (direction === 'up') head.y -= 1;
+    if (direction === 'down') head.y += 1;
+    if (direction === 'left') head.x -= 1;
+    if (direction === 'right') head.x += 1;
+
+    const hitWall = head.x < 0 || head.x >= GRID || head.y < 0 || head.y >= GRID;
+    const hitSelf = snake.some((s) => s.x === head.x && s.y === head.y);
+
+    if (hitWall || hitSelf) {
+      gameOver();
+      return;
+    }
+
+    snake.unshift(head);
+
+    if (head.x === food.x && head.y === food.y) {
+      score += 10;
+      scoreEl.textContent = score;
+      food = randomFood();
+      tickMs = Math.max(70, 140 - Math.floor(score / 5));
+      restartLoop();
+    } else {
+      snake.pop();
+    }
+
+    draw();
+  }
+
+  function restartLoop() {
+    clearInterval(loopHandle);
+    loopHandle = setInterval(step, tickMs);
+  }
+
+  function gameOver() {
+    running = false;
+    clearInterval(loopHandle);
+    if (score > highScore) {
+      highScore = score;
+      localStorage.setItem(HIGH_SCORE_KEY, String(highScore));
+      highScoreEl.textContent = highScore;
+    }
+    overlayTitle.textContent = 'GAME OVER';
+    overlayMessage.textContent = `Score: ${score}`;
+    startBtn.textContent = 'PLAY AGAIN';
+    overlay.classList.remove('hidden');
+  }
+
+  function startGame() {
+    resetState();
+    draw();
+    overlay.classList.add('hidden');
+    running = true;
+    restartLoop();
+  }
+
+  function setDirection(dir) {
+    const opposite = { up: 'down', down: 'up', left: 'right', right: 'left' };
+    if (!running) return;
+    if (opposite[dir] === direction) return;
+    nextDirection = dir;
+  }
+
+  const keyMap = {
+    ArrowUp: 'up', KeyW: 'up',
+    ArrowDown: 'down', KeyS: 'down',
+    ArrowLeft: 'left', KeyA: 'left',
+    ArrowRight: 'right', KeyD: 'right',
+  };
+
+  document.addEventListener('keydown', (e) => {
+    const dir = keyMap[e.code];
+    if (dir) {
+      e.preventDefault();
+      setDirection(dir);
+    }
+  });
+
+  document.querySelectorAll('.dpad button').forEach((btn) => {
+    btn.addEventListener('click', () => setDirection(btn.dataset.dir));
+  });
+
+  startBtn.addEventListener('click', startGame);
+
+  resetState();
+  draw();
+})();
+</script>
 </body>
 </html>
