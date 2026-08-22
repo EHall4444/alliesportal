@@ -129,7 +129,7 @@ const ALASTAIR_BIRTH_YEAR = 2020;
 
 const COUNTDOWN_EVENTS = [
   {
-    name: "First Day of School",
+    name: "1st Day of School",
     icon: "🎒",
     getNextDate: (now) => nextAnnualDate(9, 2, now),
   },

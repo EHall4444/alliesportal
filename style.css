@@ -142,9 +142,9 @@ main {
 }
 
 .countdown-next-name {
-  color: var(--gold);
+  color: var(--bg);
   font-size: clamp(0.8rem, 3vw, 1.1rem);
-  text-shadow: 0 0 4px rgba(255, 204, 51, 0.5);
+  text-transform: uppercase;
 }
 
 .countdown-clock {
@@ -177,9 +177,8 @@ main {
 }
 
 .countdown-next-detail {
-  color: var(--green);
+  color: var(--bg);
   font-size: 0.6rem;
-  text-shadow: 0 0 4px rgba(57, 255, 106, 0.5);
   min-height: 1em;
   margin: 4px 0 0;
 }
