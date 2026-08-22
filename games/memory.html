@@ -9,20 +9,70 @@
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../style.css">
 <link rel="stylesheet" href="games.css">
+<style>
+  .memory-board {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    width: 100%;
+    max-width: 400px;
+  }
+  .memory-card {
+    aspect-ratio: 1;
+    background: var(--panel);
+    border: 3px solid var(--gold);
+    color: var(--green);
+    font-size: clamp(1.2rem, 6vw, 1.8rem);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .memory-card.revealed {
+    background: var(--panel-light);
+  }
+  .memory-card.matched {
+    border-color: var(--green);
+    opacity: 0.5;
+    cursor: default;
+  }
+  .memory-card .face {
+    display: none;
+  }
+  .memory-card.revealed .face,
+  .memory-card.matched .face {
+    display: block;
+  }
+  .memory-card .back {
+    display: block;
+    color: var(--gold);
+  }
+  .memory-card.revealed .back,
+  .memory-card.matched .back {
+    display: none;
+  }
+</style>
 </head>
 <body>
 
   <header class="site-header">
-    <h1 class="title">🧠 Memory Match<span class="cursor">_</span></h1>
-    <p class="subtitle">LOADING CARTRIDGE...</p>
+    <h1 class="title">🧠 MEMORY MATCH<span class="cursor">_</span></h1>
+    <p class="subtitle">FIND ALL THE PAIRS</p>
   </header>
 
   <main class="game-main">
-    <div class="game-stage" style="max-width:480px;">
-      <div class="countdown-next pixel-panel">
-        <span class="countdown-next-icon">🚧</span>
-        <span class="countdown-next-name">COMING SOON</span>
-        <p class="countdown-next-detail">Memory Match is still being built. Check back soon, Player 1!</p>
+    <div class="game-score-row">
+      <span>MOVES<span class="value" id="moves">0</span></span>
+      <span>PAIRS<span class="value" id="pairs">0 / 8</span></span>
+    </div>
+
+    <div class="game-stage">
+      <div class="memory-board" id="board"></div>
+
+      <div class="game-overlay hidden" id="overlay">
+        <h2>YOU WIN!</h2>
+        <p id="overlay-message"></p>
+        <button class="game-btn" id="restart-btn">PLAY AGAIN</button>
       </div>
     </div>
 
@@ -33,5 +83,97 @@
     <p class="footer-text">ALASTAIR'S WORLD</p>
   </footer>
 
+<script>
+(function () {
+  const ICONS = ['🎮','🎲','🎯','🚀','🎈','🍕','🐸','⚽'];
+  const boardEl = document.getElementById('board');
+  const movesEl = document.getElementById('moves');
+  const pairsEl = document.getElementById('pairs');
+  const overlay = document.getElementById('overlay');
+  const overlayMessage = document.getElementById('overlay-message');
+  const restartBtn = document.getElementById('restart-btn');
+
+  let deck, revealed, matchedCount, moves, locked;
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function render() {
+    boardEl.querySelectorAll('.memory-card').forEach((card, i) => {
+      card.classList.toggle('matched', deck[i].matched);
+      card.classList.toggle('revealed', deck[i].revealed);
+    });
+  }
+
+  function checkWin() {
+    if (matchedCount === ICONS.length) {
+      overlayMessage.textContent = `Solved in ${moves} moves!`;
+      overlay.classList.remove('hidden');
+    }
+  }
+
+  function handleCardClick(i) {
+    if (locked || deck[i].revealed || deck[i].matched) return;
+
+    deck[i].revealed = true;
+    revealed.push(i);
+    render();
+
+    if (revealed.length === 2) {
+      moves += 1;
+      movesEl.textContent = moves;
+      locked = true;
+      const [a, b] = revealed;
+      if (deck[a].icon === deck[b].icon) {
+        deck[a].matched = true;
+        deck[b].matched = true;
+        matchedCount += 1;
+        pairsEl.textContent = `${matchedCount} / ${ICONS.length}`;
+        revealed = [];
+        locked = false;
+        render();
+        checkWin();
+      } else {
+        setTimeout(() => {
+          deck[a].revealed = false;
+          deck[b].revealed = false;
+          revealed = [];
+          locked = false;
+          render();
+        }, 700);
+      }
+    }
+  }
+
+  function startGame() {
+    const pairIcons = shuffle([...ICONS, ...ICONS]);
+    deck = pairIcons.map((icon) => ({ icon, revealed: false, matched: false }));
+    revealed = [];
+    matchedCount = 0;
+    moves = 0;
+    locked = false;
+    movesEl.textContent = moves;
+    pairsEl.textContent = `0 / ${ICONS.length}`;
+    overlay.classList.add('hidden');
+
+    boardEl.innerHTML = '';
+    deck.forEach((_, i) => {
+      const card = document.createElement('button');
+      card.className = 'memory-card';
+      card.innerHTML = `<span class="back">?</span><span class="face">${deck[i].icon}</span>`;
+      card.addEventListener('click', () => handleCardClick(i));
+      boardEl.appendChild(card);
+    });
+  }
+
+  restartBtn.addEventListener('click', startGame);
+  startGame();
+})();
+</script>
 </body>
 </html>

@@ -9,21 +9,100 @@
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../style.css">
 <link rel="stylesheet" href="games.css">
+<style>
+  .domino-line {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    width: 100%;
+    max-width: 480px;
+    padding: 16px 10px;
+  }
+  .domino-tile {
+    flex: none;
+    display: flex;
+    background: var(--panel-light);
+    border: 2px solid var(--gold);
+    font-size: 0.7rem;
+    color: var(--green);
+  }
+  .domino-tile span {
+    padding: 8px 6px;
+    min-width: 1.2em;
+    text-align: center;
+  }
+  .domino-tile span:first-child {
+    border-right: 2px solid var(--gold);
+  }
+  .domino-hand {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 480px;
+  }
+  .domino-hand-tile {
+    display: flex;
+    background: var(--panel);
+    border: 3px solid var(--gold);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.7rem;
+    color: var(--green);
+    cursor: pointer;
+  }
+  .domino-hand-tile span {
+    padding: 10px 8px;
+  }
+  .domino-hand-tile span:first-child {
+    border-right: 2px solid var(--gold);
+  }
+  .domino-hand-tile:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+  .domino-status {
+    color: var(--gold);
+    font-size: 0.65rem;
+    text-align: center;
+  }
+  .domino-actions {
+    display: flex;
+    gap: 12px;
+  }
+</style>
 </head>
 <body>
 
   <header class="site-header">
-    <h1 class="title">🀄 Dominoes<span class="cursor">_</span></h1>
-    <p class="subtitle">LOADING CARTRIDGE...</p>
+    <h1 class="title">🀄 DOMINOES<span class="cursor">_</span></h1>
+    <p class="subtitle">MATCH THE ENDS</p>
   </header>
 
   <main class="game-main">
-    <div class="game-stage" style="max-width:480px;">
-      <div class="countdown-next pixel-panel">
-        <span class="countdown-next-icon">🚧</span>
-        <span class="countdown-next-name">COMING SOON</span>
-        <p class="countdown-next-detail">Dominoes is still being built. Check back soon, Player 1!</p>
+    <div class="game-score-row">
+      <span>YOUR TILES<span class="value" id="player-count">7</span></span>
+      <span>CPU TILES<span class="value" id="cpu-count">7</span></span>
+      <span>BONEYARD<span class="value" id="boneyard-count">14</span></span>
+    </div>
+
+    <p class="domino-status" id="status">Your turn.</p>
+
+    <div class="domino-line" id="line"></div>
+
+    <div class="game-stage">
+      <div class="domino-hand" id="hand"></div>
+
+      <div class="game-overlay hidden" id="overlay">
+        <h2 id="overlay-title">GAME OVER</h2>
+        <p id="overlay-message"></p>
+        <button class="game-btn" id="restart-btn">PLAY AGAIN</button>
       </div>
+    </div>
+
+    <div class="domino-actions">
+      <button class="game-btn" id="draw-btn">DRAW TILE</button>
+      <button class="game-btn" id="pass-btn">PASS</button>
     </div>
 
     <a href="../index.html" class="game-btn back-portal">⬅ Back to Portal</a>
@@ -33,5 +112,244 @@
     <p class="footer-text">ALASTAIR'S WORLD</p>
   </footer>
 
+<script>
+(function () {
+  const lineEl = document.getElementById('line');
+  const handEl = document.getElementById('hand');
+  const statusEl = document.getElementById('status');
+  const playerCountEl = document.getElementById('player-count');
+  const cpuCountEl = document.getElementById('cpu-count');
+  const boneyardCountEl = document.getElementById('boneyard-count');
+  const drawBtn = document.getElementById('draw-btn');
+  const passBtn = document.getElementById('pass-btn');
+  const overlay = document.getElementById('overlay');
+  const overlayTitle = document.getElementById('overlay-title');
+  const overlayMessage = document.getElementById('overlay-message');
+  const restartBtn = document.getElementById('restart-btn');
+
+  let playerHand, cpuHand, boneyard, line, leftEnd, rightEnd, turn, gameOver, passStreak, firstMove;
+
+  function buildTiles() {
+    const tiles = [];
+    for (let a = 0; a <= 6; a++) {
+      for (let b = a; b <= 6; b++) {
+        tiles.push({ a, b, id: `${a}-${b}` });
+      }
+    }
+    for (let i = tiles.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
+    }
+    return tiles;
+  }
+
+  function canPlay(tile, end) {
+    return tile.a === end || tile.b === end;
+  }
+
+  function handHasPlay(hand) {
+    if (firstMove) return hand.some((t) => t.a === firstMove.a && t.b === firstMove.b);
+    return hand.some((t) => canPlay(t, leftEnd) || canPlay(t, rightEnd));
+  }
+
+  function placeTile(tile) {
+    if (line.length === 0) {
+      line.push({ a: tile.a, b: tile.b });
+      leftEnd = tile.a;
+      rightEnd = tile.b;
+      return;
+    }
+    if (canPlay(tile, rightEnd)) {
+      const orientedA = tile.a === rightEnd ? tile.a : tile.b;
+      const orientedB = tile.a === rightEnd ? tile.b : tile.a;
+      line.push({ a: orientedA, b: orientedB });
+      rightEnd = orientedB;
+      return;
+    }
+    if (canPlay(tile, leftEnd)) {
+      const orientedB = tile.b === leftEnd ? tile.b : tile.a;
+      const orientedA = tile.b === leftEnd ? tile.a : tile.b;
+      line.unshift({ a: orientedA, b: orientedB });
+      leftEnd = orientedA;
+      return;
+    }
+  }
+
+  function pipSum(hand) {
+    return hand.reduce((sum, t) => sum + t.a + t.b, 0);
+  }
+
+  function renderLine() {
+    lineEl.innerHTML = '';
+    line.forEach((t) => {
+      const el = document.createElement('div');
+      el.className = 'domino-tile';
+      el.innerHTML = `<span>${t.a}</span><span>${t.b}</span>`;
+      lineEl.appendChild(el);
+    });
+  }
+
+  function renderCounts() {
+    playerCountEl.textContent = playerHand.length;
+    cpuCountEl.textContent = cpuHand.length;
+    boneyardCountEl.textContent = boneyard.length;
+  }
+
+  function renderHand() {
+    handEl.innerHTML = '';
+    playerHand.forEach((tile) => {
+      const btn = document.createElement('button');
+      btn.className = 'domino-hand-tile';
+      btn.innerHTML = `<span>${tile.a}</span><span>${tile.b}</span>`;
+      const playable = firstMove
+        ? tile.a === firstMove.a && tile.b === firstMove.b
+        : line.length === 0 || canPlay(tile, leftEnd) || canPlay(tile, rightEnd);
+      btn.disabled = turn !== 'player' || gameOver || !playable;
+      btn.addEventListener('click', () => playerPlay(tile));
+      handEl.appendChild(btn);
+    });
+
+    const canDraw = turn === 'player' && !gameOver && boneyard.length > 0 && !handHasPlay(playerHand);
+    const canPass = turn === 'player' && !gameOver && boneyard.length === 0 && !handHasPlay(playerHand);
+    drawBtn.disabled = !canDraw;
+    passBtn.disabled = !canPass;
+  }
+
+  function endGame(resultText) {
+    gameOver = true;
+    overlayTitle.textContent = resultText.title;
+    overlayMessage.textContent = resultText.message;
+    overlay.classList.remove('hidden');
+  }
+
+  function checkWinByEmptyHand() {
+    if (playerHand.length === 0) {
+      endGame({ title: 'YOU WIN!', message: 'You played all your tiles.' });
+      return true;
+    }
+    if (cpuHand.length === 0) {
+      endGame({ title: 'CPU WINS', message: 'CPU played all its tiles first.' });
+      return true;
+    }
+    return false;
+  }
+
+  function checkBlocked() {
+    if (passStreak >= 2) {
+      const playerPips = pipSum(playerHand);
+      const cpuPips = pipSum(cpuHand);
+      let title;
+      if (playerPips < cpuPips) title = 'YOU WIN!';
+      else if (cpuPips < playerPips) title = 'CPU WINS';
+      else title = "IT'S A TIE";
+      endGame({ title, message: `Blocked! Pip count — You: ${playerPips}  CPU: ${cpuPips}` });
+      return true;
+    }
+    return false;
+  }
+
+  function playerPlay(tile) {
+    if (turn !== 'player' || gameOver) return;
+    playerHand = playerHand.filter((t) => t.id !== tile.id);
+    placeTile(tile);
+    firstMove = null;
+    passStreak = 0;
+    renderLine();
+    renderCounts();
+    if (checkWinByEmptyHand()) { renderHand(); return; }
+    turn = 'cpu';
+    statusEl.textContent = "CPU's turn...";
+    renderHand();
+    setTimeout(cpuTurn, 800);
+  }
+
+  function playerDraw() {
+    if (boneyard.length === 0) return;
+    playerHand.push(boneyard.pop());
+    renderCounts();
+    renderHand();
+    statusEl.textContent = 'You drew a tile.';
+  }
+
+  function playerPass() {
+    passStreak += 1;
+    statusEl.textContent = 'You pass.';
+    if (checkBlocked()) return;
+    turn = 'cpu';
+    renderHand();
+    setTimeout(cpuTurn, 800);
+  }
+
+  function cpuTurn() {
+    if (gameOver) return;
+
+    while (!handHasPlay(cpuHand) && boneyard.length > 0) {
+      cpuHand.push(boneyard.pop());
+    }
+    renderCounts();
+
+    const playable = firstMove
+      ? cpuHand.find((t) => t.a === firstMove.a && t.b === firstMove.b)
+      : cpuHand.find((t) => canPlay(t, leftEnd) || canPlay(t, rightEnd));
+
+    if (!playable) {
+      passStreak += 1;
+      statusEl.textContent = 'CPU passes.';
+      if (checkBlocked()) return;
+      turn = 'player';
+      statusEl.textContent = 'Your turn.';
+      renderHand();
+      return;
+    }
+
+    cpuHand = cpuHand.filter((t) => t.id !== playable.id);
+    placeTile(playable);
+    firstMove = null;
+    passStreak = 0;
+    renderLine();
+    renderCounts();
+
+    if (checkWinByEmptyHand()) { renderHand(); return; }
+    turn = 'player';
+    statusEl.textContent = 'Your turn.';
+    renderHand();
+  }
+
+  function startGame() {
+    const tiles = buildTiles();
+    playerHand = tiles.splice(0, 7);
+    cpuHand = tiles.splice(0, 7);
+    boneyard = tiles;
+    line = [];
+    leftEnd = null;
+    rightEnd = null;
+    gameOver = false;
+    passStreak = 0;
+
+    const allDoubles = [...playerHand, ...cpuHand].filter((t) => t.a === t.b);
+    if (allDoubles.length > 0) {
+      const highest = allDoubles.reduce((best, t) => (t.a > best.a ? t : best));
+      firstMove = highest;
+      turn = playerHand.some((t) => t.id === highest.id) ? 'player' : 'cpu';
+    } else {
+      firstMove = null;
+      turn = 'player';
+    }
+
+    statusEl.textContent = turn === 'player' ? 'Your turn.' : "CPU's turn...";
+    overlay.classList.add('hidden');
+    renderLine();
+    renderCounts();
+    renderHand();
+
+    if (turn === 'cpu') setTimeout(cpuTurn, 800);
+  }
+
+  drawBtn.addEventListener('click', playerDraw);
+  passBtn.addEventListener('click', playerPass);
+  restartBtn.addEventListener('click', startGame);
+  startGame();
+})();
+</script>
 </body>
 </html>

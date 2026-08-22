@@ -9,20 +9,100 @@
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../style.css">
 <link rel="stylesheet" href="games.css">
+<style>
+  .sol-top-row {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 480px;
+    gap: 8px;
+  }
+  .sol-stock-waste {
+    display: flex;
+    gap: 8px;
+  }
+  .sol-foundations {
+    display: flex;
+    gap: 8px;
+  }
+  .card {
+    width: 48px;
+    height: 68px;
+    background: var(--panel-light);
+    border: 2px solid var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    color: var(--green);
+    cursor: pointer;
+    user-select: none;
+  }
+  .card.red { color: #ff6b6b; }
+  .card.back {
+    background: repeating-linear-gradient(45deg, var(--panel), var(--panel) 4px, var(--panel-light) 4px, var(--panel-light) 8px);
+  }
+  .card.empty {
+    background: transparent;
+    border-style: dashed;
+    opacity: 0.5;
+    color: var(--gold);
+  }
+  .card.selected {
+    outline: 3px solid var(--gold);
+    outline-offset: 1px;
+  }
+  .sol-tableau {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    width: 100%;
+    max-width: 480px;
+  }
+  .sol-column {
+    position: relative;
+    min-height: 90px;
+  }
+  .sol-column .card {
+    position: absolute;
+    left: 0;
+    width: 100%;
+  }
+  .sol-status {
+    color: var(--gold);
+    font-size: 0.6rem;
+    text-align: center;
+  }
+  @media (max-width: 480px) {
+    .card { width: 40px; height: 58px; font-size: 0.5rem; }
+  }
+</style>
 </head>
 <body>
 
   <header class="site-header">
-    <h1 class="title">🃏 Solitaire<span class="cursor">_</span></h1>
-    <p class="subtitle">LOADING CARTRIDGE...</p>
+    <h1 class="title">🃏 SOLITAIRE<span class="cursor">_</span></h1>
+    <p class="subtitle">CLICK TO SELECT, CLICK TO MOVE</p>
   </header>
 
   <main class="game-main">
-    <div class="game-stage" style="max-width:480px;">
-      <div class="countdown-next pixel-panel">
-        <span class="countdown-next-icon">🚧</span>
-        <span class="countdown-next-name">COMING SOON</span>
-        <p class="countdown-next-detail">Solitaire is still being built. Check back soon, Player 1!</p>
+    <p class="sol-status" id="status">Tap a card to select it, then tap where to move it.</p>
+
+    <div class="sol-top-row">
+      <div class="sol-stock-waste">
+        <div class="card back" id="stock"></div>
+        <div class="card empty" id="waste"></div>
+      </div>
+      <div class="sol-foundations" id="foundations"></div>
+    </div>
+
+    <div class="game-stage">
+      <div class="sol-tableau" id="tableau"></div>
+
+      <div class="game-overlay hidden" id="overlay">
+        <h2 id="overlay-title">YOU WIN!</h2>
+        <p id="overlay-message">All four foundations complete.</p>
+        <button class="game-btn" id="restart-btn">PLAY AGAIN</button>
       </div>
     </div>
 
@@ -33,5 +113,248 @@
     <p class="footer-text">ALASTAIR'S WORLD</p>
   </footer>
 
+<script>
+(function () {
+  const SUITS = ['♠', '♥', '♦', '♣'];
+  const RED_SUITS = ['♥', '♦'];
+  const RANK_LABELS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+
+  const stockEl = document.getElementById('stock');
+  const wasteEl = document.getElementById('waste');
+  const foundationsEl = document.getElementById('foundations');
+  const tableauEl = document.getElementById('tableau');
+  const statusEl = document.getElementById('status');
+  const overlay = document.getElementById('overlay');
+  const restartBtn = document.getElementById('restart-btn');
+
+  let tableau, foundations, stock, waste, selected;
+
+  function buildDeck() {
+    const deck = [];
+    SUITS.forEach((suit) => {
+      for (let rank = 1; rank <= 13; rank++) {
+        deck.push({ suit, rank, red: RED_SUITS.includes(suit), id: `${suit}${rank}` });
+      }
+    });
+    for (let i = deck.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
+    return deck;
+  }
+
+  function dealGame() {
+    const deck = buildDeck();
+    tableau = [];
+    for (let col = 0; col < 7; col++) {
+      const cards = deck.splice(0, col + 1);
+      cards.forEach((c, i) => { c.faceUp = i === cards.length - 1; });
+      tableau.push(cards);
+    }
+    stock = deck.map((c) => ({ ...c, faceUp: false }));
+    waste = [];
+    foundations = { '♠': [], '♥': [], '♦': [], '♣': [] };
+    selected = null;
+  }
+
+  function cardLabel(card) {
+    return `${RANK_LABELS[card.rank - 1]}${card.suit}`;
+  }
+
+  function makeCardEl(card, faceUp, selectedFlag) {
+    const el = document.createElement('div');
+    el.className = 'card' + (faceUp ? (card.red ? ' red' : '') : ' back') + (selectedFlag ? ' selected' : '');
+    el.textContent = faceUp ? cardLabel(card) : '';
+    return el;
+  }
+
+  function isSelectedTableauCard(col, index) {
+    return selected && selected.source === 'tableau' && selected.col === col && index >= selected.index;
+  }
+
+  function render() {
+    stockEl.className = 'card back';
+    stockEl.textContent = stock.length === 0 ? '↺' : '';
+
+    wasteEl.className = 'card' + (waste.length ? '' : ' empty');
+    if (waste.length) {
+      const top = waste[waste.length - 1];
+      wasteEl.classList.toggle('red', top.red);
+      wasteEl.textContent = cardLabel(top);
+      wasteEl.classList.toggle('selected', selected && selected.source === 'waste');
+    } else {
+      wasteEl.textContent = '';
+    }
+
+    foundationsEl.innerHTML = '';
+    SUITS.forEach((suit) => {
+      const pile = foundations[suit];
+      const el = document.createElement('div');
+      if (pile.length === 0) {
+        el.className = 'card empty';
+        el.textContent = suit;
+      } else {
+        const top = pile[pile.length - 1];
+        el.className = 'card' + (top.red ? ' red' : '');
+        el.textContent = cardLabel(top);
+      }
+      el.addEventListener('click', () => handleFoundationClick(suit));
+      foundationsEl.appendChild(el);
+    });
+
+    tableauEl.innerHTML = '';
+    tableau.forEach((col, colIndex) => {
+      const colEl = document.createElement('div');
+      colEl.className = 'sol-column';
+      const height = col.length === 0 ? 90 : 22 * (col.length - 1) + 68;
+      colEl.style.minHeight = `${height}px`;
+
+      if (col.length === 0) {
+        const placeholder = document.createElement('div');
+        placeholder.className = 'card empty';
+        placeholder.style.position = 'absolute';
+        placeholder.addEventListener('click', () => handleTableauClick(colIndex, 0));
+        colEl.appendChild(placeholder);
+      }
+
+      col.forEach((card, i) => {
+        const el = makeCardEl(card, card.faceUp, isSelectedTableauCard(colIndex, i));
+        el.style.top = `${22 * i}px`;
+        el.style.zIndex = i;
+        el.addEventListener('click', () => handleTableauClick(colIndex, i));
+        colEl.appendChild(el);
+      });
+
+      tableauEl.appendChild(colEl);
+    });
+  }
+
+  function trySelectWaste() {
+    if (waste.length === 0) return;
+    selected = { source: 'waste' };
+  }
+
+  function trySelectTableau(col, index) {
+    const column = tableau[col];
+    if (index >= column.length) return;
+    if (!column[index].faceUp) return;
+    selected = { source: 'tableau', col, index };
+  }
+
+  function movingGroup() {
+    if (!selected) return [];
+    if (selected.source === 'waste') return [waste[waste.length - 1]];
+    if (selected.source === 'tableau') return tableau[selected.col].slice(selected.index);
+    return [];
+  }
+
+  function removeSelectedGroup() {
+    if (selected.source === 'waste') {
+      waste.pop();
+    } else if (selected.source === 'tableau') {
+      tableau[selected.col].splice(selected.index);
+      const col = tableau[selected.col];
+      if (col.length > 0) col[col.length - 1].faceUp = true;
+    }
+  }
+
+  function canStackTableau(bottomCard, destTopCard) {
+    if (!destTopCard) return bottomCard.rank === 13;
+    return destTopCard.red !== bottomCard.red && destTopCard.rank === bottomCard.rank + 1;
+  }
+
+  function handleStockClick() {
+    selected = null;
+    if (stock.length > 0) {
+      const card = stock.pop();
+      card.faceUp = true;
+      waste.push(card);
+    } else if (waste.length > 0) {
+      stock = waste.reverse().map((c) => ({ ...c, faceUp: false }));
+      waste = [];
+    }
+    render();
+  }
+
+  function handleFoundationClick(suit) {
+    if (selected) {
+      const group = movingGroup();
+      if (group.length === 1) {
+        const card = group[0];
+        const pile = foundations[suit];
+        const topRank = pile.length ? pile[pile.length - 1].rank : 0;
+        if (card.suit === suit && card.rank === topRank + 1) {
+          removeSelectedGroup();
+          pile.push(card);
+          selected = null;
+          render();
+          checkWin();
+          return;
+        }
+      }
+      selected = null;
+    }
+    render();
+  }
+
+  function handleTableauClick(colIndex, index) {
+    const column = tableau[colIndex];
+
+    if (selected) {
+      const group = movingGroup();
+      const destTop = column.length > 0 ? column[column.length - 1] : null;
+      const isSameColumn = selected.source === 'tableau' && selected.col === colIndex;
+
+      if (!isSameColumn && canStackTableau(group[0], destTop)) {
+        removeSelectedGroup();
+        group.forEach((c) => { c.faceUp = true; tableau[colIndex].push(c); });
+        selected = null;
+        render();
+        checkWin();
+        return;
+      }
+
+      selected = null;
+      trySelectTableau(colIndex, index);
+      render();
+      return;
+    }
+
+    trySelectTableau(colIndex, index);
+    render();
+  }
+
+  wasteEl.addEventListener('click', () => {
+    if (selected && selected.source === 'waste') {
+      selected = null;
+    } else if (selected) {
+      selected = null;
+      trySelectWaste();
+    } else {
+      trySelectWaste();
+    }
+    render();
+  });
+
+  stockEl.addEventListener('click', handleStockClick);
+
+  function checkWin() {
+    const total = Object.values(foundations).reduce((sum, pile) => sum + pile.length, 0);
+    if (total === 52) {
+      overlay.classList.remove('hidden');
+    }
+  }
+
+  function startGame() {
+    dealGame();
+    overlay.classList.add('hidden');
+    statusEl.textContent = 'Tap a card to select it, then tap where to move it.';
+    render();
+  }
+
+  restartBtn.addEventListener('click', startGame);
+  startGame();
+})();
+</script>
 </body>
 </html>

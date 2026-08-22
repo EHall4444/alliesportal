@@ -9,22 +9,85 @@
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../style.css">
 <link rel="stylesheet" href="games.css">
+<style>
+  .war-table {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    width: 100%;
+    max-width: 420px;
+    gap: 16px;
+  }
+  .war-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .war-slot-label {
+    color: var(--gold);
+    font-size: 0.6rem;
+  }
+  .playing-card {
+    width: 80px;
+    height: 112px;
+    background: var(--panel-light);
+    border: 3px solid var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    color: var(--green);
+  }
+  .playing-card.red { color: #ff6b6b; }
+  .playing-card.empty { border-style: dashed; opacity: 0.4; }
+  .war-vs {
+    color: var(--gold);
+    font-size: 0.8rem;
+  }
+  .war-message {
+    color: var(--green);
+    font-size: 0.65rem;
+    text-align: center;
+    min-height: 2em;
+  }
+</style>
 </head>
 <body>
 
   <header class="site-header">
-    <h1 class="title">⚔️ War<span class="cursor">_</span></h1>
-    <p class="subtitle">LOADING CARTRIDGE...</p>
+    <h1 class="title">⚔️ WAR<span class="cursor">_</span></h1>
+    <p class="subtitle">HIGH CARD TAKES THE PILE</p>
   </header>
 
   <main class="game-main">
-    <div class="game-stage" style="max-width:480px;">
-      <div class="countdown-next pixel-panel">
-        <span class="countdown-next-icon">🚧</span>
-        <span class="countdown-next-name">COMING SOON</span>
-        <p class="countdown-next-detail">War is still being built. Check back soon, Player 1!</p>
+    <div class="game-score-row">
+      <span>YOU<span class="value" id="player-count">26</span></span>
+      <span>CPU<span class="value" id="cpu-count">26</span></span>
+    </div>
+
+    <div class="game-stage">
+      <div class="war-table">
+        <div class="war-slot">
+          <span class="war-slot-label">YOU</span>
+          <div class="playing-card empty" id="player-card">🂠</div>
+        </div>
+        <span class="war-vs">VS</span>
+        <div class="war-slot">
+          <span class="war-slot-label">CPU</span>
+          <div class="playing-card empty" id="cpu-card">🂠</div>
+        </div>
+      </div>
+
+      <div class="game-overlay hidden" id="overlay">
+        <h2 id="overlay-title">GAME OVER</h2>
+        <p id="overlay-message"></p>
+        <button class="game-btn" id="restart-btn">PLAY AGAIN</button>
       </div>
     </div>
+
+    <p class="war-message" id="message">Press Play Card to begin.</p>
+    <button class="game-btn" id="play-btn">PLAY CARD</button>
 
     <a href="../index.html" class="game-btn back-portal">⬅ Back to Portal</a>
   </main>
@@ -33,5 +96,145 @@
     <p class="footer-text">ALASTAIR'S WORLD</p>
   </footer>
 
+<script>
+(function () {
+  const SUITS = [
+    { symbol: '♠', red: false }, { symbol: '♣', red: false },
+    { symbol: '♥', red: true }, { symbol: '♦', red: true },
+  ];
+  const RANKS = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+
+  const playerCountEl = document.getElementById('player-count');
+  const cpuCountEl = document.getElementById('cpu-count');
+  const playerCardEl = document.getElementById('player-card');
+  const cpuCardEl = document.getElementById('cpu-card');
+  const messageEl = document.getElementById('message');
+  const playBtn = document.getElementById('play-btn');
+  const overlay = document.getElementById('overlay');
+  const overlayTitle = document.getElementById('overlay-title');
+  const overlayMessage = document.getElementById('overlay-message');
+  const restartBtn = document.getElementById('restart-btn');
+
+  let playerDeck, cpuDeck;
+
+  function buildDeck() {
+    const deck = [];
+    SUITS.forEach((suit) => {
+      RANKS.forEach((rank, i) => {
+        deck.push({ rank, value: i + 2, suit: suit.symbol, red: suit.red });
+      });
+    });
+    for (let i = deck.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
+    return deck;
+  }
+
+  function showCard(el, card) {
+    el.classList.remove('empty');
+    el.classList.toggle('red', card.red);
+    el.textContent = `${card.rank}${card.suit}`;
+  }
+
+  function updateCounts() {
+    playerCountEl.textContent = playerDeck.length;
+    cpuCountEl.textContent = cpuDeck.length;
+  }
+
+  function endGame() {
+    playBtn.disabled = true;
+    const playerWon = cpuDeck.length === 0;
+    overlayTitle.textContent = playerWon ? 'YOU WIN THE WAR!' : 'CPU WINS THE WAR';
+    overlayMessage.textContent = playerWon
+      ? 'You captured the whole deck.'
+      : 'The CPU captured the whole deck.';
+    overlay.classList.remove('hidden');
+  }
+
+  function playRound() {
+    if (playerDeck.length === 0 || cpuDeck.length === 0) {
+      endGame();
+      return;
+    }
+
+    const pile = [];
+    const pCard = playerDeck.shift();
+    const cCard = cpuDeck.shift();
+    pile.push(pCard, cCard);
+    showCard(playerCardEl, pCard);
+    showCard(cpuCardEl, cCard);
+
+    if (pCard.value > cCard.value) {
+      playerDeck.push(...pile);
+      messageEl.textContent = `${pCard.rank}${pCard.suit} beats ${cCard.rank}${cCard.suit}. You take the pile.`;
+    } else if (cCard.value > pCard.value) {
+      cpuDeck.push(...pile);
+      messageEl.textContent = `${cCard.rank}${cCard.suit} beats ${pCard.rank}${pCard.suit}. CPU takes the pile.`;
+    } else {
+      messageEl.textContent = `Tie! ${pCard.rank}${pCard.suit} vs ${cCard.rank}${cCard.suit} — WAR!`;
+      resolveWar(pile);
+      updateCounts();
+      if (playerDeck.length === 0 || cpuDeck.length === 0) endGame();
+      return;
+    }
+
+    updateCounts();
+    if (playerDeck.length === 0 || cpuDeck.length === 0) endGame();
+  }
+
+  function resolveWar(pile) {
+    const WAR_DOWN_CARDS = 3;
+
+    if (playerDeck.length < WAR_DOWN_CARDS + 1) {
+      pile.push(...playerDeck);
+      playerDeck = [];
+      cpuDeck.push(...pile);
+      return;
+    }
+    if (cpuDeck.length < WAR_DOWN_CARDS + 1) {
+      pile.push(...cpuDeck);
+      cpuDeck = [];
+      playerDeck.push(...pile);
+      return;
+    }
+
+    for (let i = 0; i < WAR_DOWN_CARDS; i++) {
+      pile.push(playerDeck.shift(), cpuDeck.shift());
+    }
+    const pCard = playerDeck.shift();
+    const cCard = cpuDeck.shift();
+    pile.push(pCard, cCard);
+    showCard(playerCardEl, pCard);
+    showCard(cpuCardEl, cCard);
+
+    if (pCard.value > cCard.value) {
+      playerDeck.push(...pile);
+    } else if (cCard.value > pCard.value) {
+      cpuDeck.push(...pile);
+    } else {
+      resolveWar(pile);
+    }
+  }
+
+  function startGame() {
+    const deck = buildDeck();
+    playerDeck = deck.slice(0, 26);
+    cpuDeck = deck.slice(26);
+    playerCardEl.classList.add('empty');
+    cpuCardEl.classList.add('empty');
+    playerCardEl.textContent = '🂠';
+    cpuCardEl.textContent = '🂠';
+    playBtn.disabled = false;
+    messageEl.textContent = 'Press Play Card to begin.';
+    overlay.classList.add('hidden');
+    updateCounts();
+  }
+
+  playBtn.addEventListener('click', playRound);
+  restartBtn.addEventListener('click', startGame);
+  startGame();
+})();
+</script>
 </body>
 </html>

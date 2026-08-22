@@ -9,22 +9,72 @@
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../style.css">
 <link rel="stylesheet" href="games.css">
+<style>
+  .gofish-hand {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 480px;
+  }
+  .gofish-rank-btn {
+    font-family: 'Press Start 2P', monospace;
+    background: var(--panel);
+    border: 3px solid var(--gold);
+    color: var(--green);
+    font-size: 0.6rem;
+    padding: 10px 8px;
+    cursor: pointer;
+  }
+  .gofish-rank-btn:hover, .gofish-rank-btn:focus-visible {
+    background: var(--panel-light);
+  }
+  .gofish-rank-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+  .gofish-log {
+    color: var(--green);
+    font-size: 0.55rem;
+    text-align: center;
+    max-width: 480px;
+    min-height: 3em;
+    line-height: 1.6;
+  }
+  .gofish-turn {
+    color: var(--gold);
+    font-size: 0.7rem;
+  }
+</style>
 </head>
 <body>
 
   <header class="site-header">
-    <h1 class="title">🐟 Go Fish<span class="cursor">_</span></h1>
-    <p class="subtitle">LOADING CARTRIDGE...</p>
+    <h1 class="title">🐟 GO FISH<span class="cursor">_</span></h1>
+    <p class="subtitle">COLLECT BOOKS OF FOUR</p>
   </header>
 
   <main class="game-main">
-    <div class="game-stage" style="max-width:480px;">
-      <div class="countdown-next pixel-panel">
-        <span class="countdown-next-icon">🚧</span>
-        <span class="countdown-next-name">COMING SOON</span>
-        <p class="countdown-next-detail">Go Fish is still being built. Check back soon, Player 1!</p>
+    <div class="game-score-row">
+      <span>YOUR BOOKS<span class="value" id="player-books">0</span></span>
+      <span>CPU BOOKS<span class="value" id="cpu-books">0</span></span>
+      <span>DECK<span class="value" id="deck-count">0</span></span>
+    </div>
+
+    <p class="gofish-turn" id="turn-label">Your turn — ask for a rank you hold.</p>
+
+    <div class="game-stage">
+      <div class="gofish-hand" id="hand"></div>
+
+      <div class="game-overlay hidden" id="overlay">
+        <h2 id="overlay-title">GAME OVER</h2>
+        <p id="overlay-message"></p>
+        <button class="game-btn" id="restart-btn">PLAY AGAIN</button>
       </div>
     </div>
+
+    <p class="gofish-log" id="log"></p>
 
     <a href="../index.html" class="game-btn back-portal">⬅ Back to Portal</a>
   </main>
@@ -33,5 +83,200 @@
     <p class="footer-text">ALASTAIR'S WORLD</p>
   </footer>
 
+<script>
+(function () {
+  const RANKS = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+  const SUITS = ['♠','♥','♦','♣'];
+
+  const handEl = document.getElementById('hand');
+  const logEl = document.getElementById('log');
+  const turnLabel = document.getElementById('turn-label');
+  const playerBooksEl = document.getElementById('player-books');
+  const cpuBooksEl = document.getElementById('cpu-books');
+  const deckCountEl = document.getElementById('deck-count');
+  const overlay = document.getElementById('overlay');
+  const overlayTitle = document.getElementById('overlay-title');
+  const overlayMessage = document.getElementById('overlay-message');
+  const restartBtn = document.getElementById('restart-btn');
+
+  let deck, playerHand, cpuHand, playerBooks, cpuBooks, turn, gameOver;
+
+  function buildDeck() {
+    const d = [];
+    RANKS.forEach((rank) => SUITS.forEach((suit) => d.push({ rank, suit })));
+    for (let i = d.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [d[i], d[j]] = [d[j], d[i]];
+    }
+    return d;
+  }
+
+  function log(msg) {
+    logEl.textContent = msg;
+  }
+
+  function countByRank(hand) {
+    const counts = {};
+    hand.forEach((c) => { counts[c.rank] = (counts[c.rank] || 0) + 1; });
+    return counts;
+  }
+
+  function extractBooks(hand) {
+    const counts = countByRank(hand);
+    let books = 0;
+    Object.entries(counts).forEach(([rank, count]) => {
+      if (count === 4) {
+        books += 1;
+        for (let i = hand.length - 1; i >= 0; i--) {
+          if (hand[i].rank === rank) hand.splice(i, 1);
+        }
+      }
+    });
+    return books;
+  }
+
+  function draw(hand) {
+    if (deck.length === 0) return null;
+    const card = deck.pop();
+    hand.push(card);
+    deckCountEl.textContent = deck.length;
+    return card;
+  }
+
+  function updateScores() {
+    playerBooksEl.textContent = playerBooks;
+    cpuBooksEl.textContent = cpuBooks;
+    deckCountEl.textContent = deck.length;
+  }
+
+  function checkGameOver() {
+    if (playerBooks + cpuBooks >= 13 || (deck.length === 0 && playerHand.length === 0 && cpuHand.length === 0)) {
+      gameOver = true;
+      let title, msg;
+      if (playerBooks > cpuBooks) { title = 'YOU WIN!'; }
+      else if (cpuBooks > playerBooks) { title = 'CPU WINS'; }
+      else { title = "IT'S A TIE"; }
+      msg = `Final books — You: ${playerBooks}  CPU: ${cpuBooks}`;
+      overlayTitle.textContent = title;
+      overlayMessage.textContent = msg;
+      overlay.classList.remove('hidden');
+      return true;
+    }
+    return false;
+  }
+
+  function renderHand() {
+    handEl.innerHTML = '';
+    const counts = countByRank(playerHand);
+    Object.keys(counts).sort((a, b) => RANKS.indexOf(a) - RANKS.indexOf(b)).forEach((rank) => {
+      const btn = document.createElement('button');
+      btn.className = 'gofish-rank-btn';
+      btn.textContent = `${rank} (${counts[rank]})`;
+      btn.disabled = turn !== 'player' || gameOver;
+      btn.addEventListener('click', () => playerAsk(rank));
+      handEl.appendChild(btn);
+    });
+  }
+
+  function playerAsk(rank) {
+    if (turn !== 'player' || gameOver) return;
+
+    const matches = cpuHand.filter((c) => c.rank === rank);
+    if (matches.length > 0) {
+      cpuHand = cpuHand.filter((c) => c.rank !== rank);
+      playerHand.push(...matches);
+      log(`You asked for ${rank}s — CPU had ${matches.length}. You go again!`);
+      playerBooks += extractBooks(playerHand);
+      updateScores();
+      if (!checkGameOver()) renderHand();
+      return;
+    }
+
+    const drawn = draw(playerHand);
+    if (drawn && drawn.rank === rank) {
+      log(`You asked for ${rank}s — Go Fish! You drew a ${drawn.rank}. You go again!`);
+      playerBooks += extractBooks(playerHand);
+      updateScores();
+      if (!checkGameOver()) renderHand();
+      return;
+    }
+
+    log(drawn
+      ? `You asked for ${rank}s — Go Fish! You drew a ${drawn.rank}${drawn.suit}. Turn passes to CPU.`
+      : `You asked for ${rank}s — Go Fish! The deck is empty. Turn passes to CPU.`);
+    playerBooks += extractBooks(playerHand);
+    updateScores();
+    if (checkGameOver()) return;
+    turn = 'cpu';
+    turnLabel.textContent = "CPU's turn...";
+    renderHand();
+    setTimeout(cpuTurn, 900);
+  }
+
+  function cpuTurn() {
+    if (gameOver) return;
+    const counts = countByRank(cpuHand);
+    const ranks = Object.keys(counts);
+    if (ranks.length === 0) {
+      turn = 'player';
+      turnLabel.textContent = 'Your turn — ask for a rank you hold.';
+      renderHand();
+      return;
+    }
+    const askRank = ranks[Math.floor(Math.random() * ranks.length)];
+    const matches = playerHand.filter((c) => c.rank === askRank);
+
+    if (matches.length > 0) {
+      playerHand = playerHand.filter((c) => c.rank !== askRank);
+      cpuHand.push(...matches);
+      log(`CPU asked you for ${askRank}s — you had ${matches.length}. CPU goes again!`);
+      cpuBooks += extractBooks(cpuHand);
+      updateScores();
+      renderHand();
+      if (!checkGameOver()) setTimeout(cpuTurn, 900);
+      return;
+    }
+
+    const drawn = draw(cpuHand);
+    if (drawn && drawn.rank === askRank) {
+      log(`CPU asked you for ${askRank}s — Go Fish! CPU drew a match and goes again!`);
+      cpuBooks += extractBooks(cpuHand);
+      updateScores();
+      if (!checkGameOver()) setTimeout(cpuTurn, 900);
+      return;
+    }
+
+    log(`CPU asked you for ${askRank}s — Go Fish! Turn passes to you.`);
+    cpuBooks += extractBooks(cpuHand);
+    updateScores();
+    if (checkGameOver()) return;
+    turn = 'player';
+    turnLabel.textContent = 'Your turn — ask for a rank you hold.';
+    renderHand();
+  }
+
+  function startGame() {
+    deck = buildDeck();
+    playerHand = [];
+    cpuHand = [];
+    for (let i = 0; i < 7; i++) {
+      draw(playerHand);
+      draw(cpuHand);
+    }
+    playerBooks = extractBooks(playerHand);
+    cpuBooks = extractBooks(cpuHand);
+    turn = 'player';
+    gameOver = false;
+    turnLabel.textContent = 'Your turn — ask for a rank you hold.';
+    log('Game start! Ask the CPU for a rank you already hold.');
+    overlay.classList.add('hidden');
+    updateScores();
+    renderHand();
+  }
+
+  restartBtn.addEventListener('click', startGame);
+  startGame();
+})();
+</script>
 </body>
 </html>

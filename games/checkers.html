@@ -9,20 +9,74 @@
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../style.css">
 <link rel="stylesheet" href="games.css">
+<style>
+  .checkers-board {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    width: 100%;
+    max-width: 420px;
+    aspect-ratio: 1;
+    border: 4px solid var(--gold);
+  }
+  .sq {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .sq.light { background: var(--panel-light); }
+  .sq.dark { background: #05130a; cursor: pointer; }
+  .sq.selected { outline: 3px solid var(--gold); outline-offset: -3px; }
+  .sq.valid::after {
+    content: "";
+    position: absolute;
+    width: 22%;
+    height: 22%;
+    border-radius: 50%;
+    background: rgba(255, 204, 51, 0.7);
+  }
+  .piece {
+    width: 72%;
+    height: 72%;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+  }
+  .piece.player { background: var(--gold); box-shadow: inset 0 0 0 3px #8a6a00; }
+  .piece.cpu { background: var(--green); box-shadow: inset 0 0 0 3px #0f7a2c; }
+  .checkers-status {
+    color: var(--gold);
+    font-size: 0.65rem;
+    text-align: center;
+    min-height: 1.5em;
+  }
+</style>
 </head>
 <body>
 
   <header class="site-header">
-    <h1 class="title">⚫ Checkers<span class="cursor">_</span></h1>
-    <p class="subtitle">LOADING CARTRIDGE...</p>
+    <h1 class="title">⚫ CHECKERS<span class="cursor">_</span></h1>
+    <p class="subtitle">GOLD VS GREEN</p>
   </header>
 
   <main class="game-main">
-    <div class="game-stage" style="max-width:480px;">
-      <div class="countdown-next pixel-panel">
-        <span class="countdown-next-icon">🚧</span>
-        <span class="countdown-next-name">COMING SOON</span>
-        <p class="countdown-next-detail">Checkers is still being built. Check back soon, Player 1!</p>
+    <div class="game-score-row">
+      <span>YOU<span class="value" id="player-count">12</span></span>
+      <span>CPU<span class="value" id="cpu-count">12</span></span>
+    </div>
+
+    <p class="checkers-status" id="status">Your turn — pick a gold piece.</p>
+
+    <div class="game-stage">
+      <div class="checkers-board" id="board"></div>
+
+      <div class="game-overlay hidden" id="overlay">
+        <h2 id="overlay-title">GAME OVER</h2>
+        <p id="overlay-message"></p>
+        <button class="game-btn" id="restart-btn">PLAY AGAIN</button>
       </div>
     </div>
 
@@ -33,5 +87,256 @@
     <p class="footer-text">ALASTAIR'S WORLD</p>
   </footer>
 
+<script>
+(function () {
+  const boardEl = document.getElementById('board');
+  const statusEl = document.getElementById('status');
+  const playerCountEl = document.getElementById('player-count');
+  const cpuCountEl = document.getElementById('cpu-count');
+  const overlay = document.getElementById('overlay');
+  const overlayTitle = document.getElementById('overlay-title');
+  const overlayMessage = document.getElementById('overlay-message');
+  const restartBtn = document.getElementById('restart-btn');
+
+  let board, turn, selected, forcedJumpsFrom, gameOver;
+
+  function isDark(r, c) {
+    return (r + c) % 2 === 1;
+  }
+
+  function initBoard() {
+    const b = Array.from({ length: 8 }, () => Array(8).fill(null));
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        if (!isDark(r, c)) continue;
+        if (r < 3) b[r][c] = { color: 'cpu', king: false };
+        else if (r > 4) b[r][c] = { color: 'player', king: false };
+      }
+    }
+    return b;
+  }
+
+  function inBounds(r, c) {
+    return r >= 0 && r < 8 && c >= 0 && c < 8;
+  }
+
+  function directionsFor(piece) {
+    if (piece.king) return [[-1,-1],[-1,1],[1,-1],[1,1]];
+    return piece.color === 'player' ? [[-1,-1],[-1,1]] : [[1,-1],[1,1]];
+  }
+
+  function getMoves(r, c) {
+    const piece = board[r][c];
+    if (!piece) return { steps: [], jumps: [] };
+    const steps = [];
+    const jumps = [];
+    directionsFor(piece).forEach(([dr, dc]) => {
+      const nr = r + dr, nc = c + dc;
+      if (inBounds(nr, nc) && !board[nr][nc]) {
+        steps.push({ to: [nr, nc] });
+      }
+      const jr = r + dr * 2, jc = c + dc * 2;
+      if (
+        inBounds(jr, jc) && !board[jr][jc] &&
+        inBounds(nr, nc) && board[nr][nc] && board[nr][nc].color !== piece.color
+      ) {
+        jumps.push({ to: [jr, jc], captured: [nr, nc] });
+      }
+    });
+    return { steps, jumps };
+  }
+
+  function allMovesFor(color) {
+    const moves = [];
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const piece = board[r][c];
+        if (!piece || piece.color !== color) continue;
+        const { steps, jumps } = getMoves(r, c);
+        jumps.forEach((j) => moves.push({ from: [r, c], to: j.to, captured: j.captured, isJump: true }));
+        if (jumps.length === 0) {
+          steps.forEach((s) => moves.push({ from: [r, c], to: s.to, isJump: false }));
+        }
+      }
+    }
+    const hasJump = moves.some((m) => m.isJump);
+    return hasJump ? moves.filter((m) => m.isJump) : moves;
+  }
+
+  function maybePromote(r, c) {
+    const piece = board[r][c];
+    if (!piece) return;
+    if (piece.color === 'player' && r === 0) piece.king = true;
+    if (piece.color === 'cpu' && r === 7) piece.king = true;
+  }
+
+  function applyMove(move) {
+    const [fr, fc] = move.from;
+    const [tr, tc] = move.to;
+    board[tr][tc] = board[fr][fc];
+    board[fr][fc] = null;
+    if (move.captured) {
+      const [cr, cc] = move.captured;
+      board[cr][cc] = null;
+    }
+    maybePromote(tr, tc);
+  }
+
+  function countPieces() {
+    let player = 0, cpu = 0;
+    for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+      if (board[r][c]?.color === 'player') player += 1;
+      if (board[r][c]?.color === 'cpu') cpu += 1;
+    }
+    playerCountEl.textContent = player;
+    cpuCountEl.textContent = cpu;
+    return { player, cpu };
+  }
+
+  function checkGameOver() {
+    const { player, cpu } = countPieces();
+    const playerMoves = allMovesFor('player');
+    const cpuMoves = allMovesFor('cpu');
+    if (player === 0 || (turn === 'player' && playerMoves.length === 0)) {
+      endGame(false);
+      return true;
+    }
+    if (cpu === 0 || (turn === 'cpu' && cpuMoves.length === 0)) {
+      endGame(true);
+      return true;
+    }
+    return false;
+  }
+
+  function endGame(playerWon) {
+    gameOver = true;
+    overlayTitle.textContent = playerWon ? 'YOU WIN!' : 'CPU WINS';
+    overlayMessage.textContent = playerWon ? 'The CPU has no moves left.' : 'You have no moves left.';
+    overlay.classList.remove('hidden');
+  }
+
+  function render() {
+    boardEl.innerHTML = '';
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const sq = document.createElement('div');
+        sq.className = `sq ${isDark(r, c) ? 'dark' : 'light'}`;
+        if (selected && selected[0] === r && selected[1] === c) sq.classList.add('selected');
+        if (isDark(r, c) && selected) {
+          const { steps, jumps } = getMoves(selected[0], selected[1]);
+          const options = jumps.length ? jumps.map((j) => j.to) : steps.map((s) => s.to);
+          if (options.some(([or, oc]) => or === r && oc === c)) sq.classList.add('valid');
+        }
+        const piece = board[r][c];
+        if (piece) {
+          const p = document.createElement('div');
+          p.className = `piece ${piece.color}`;
+          if (piece.king) p.textContent = '♛';
+          sq.appendChild(p);
+        }
+        if (isDark(r, c)) {
+          sq.addEventListener('click', () => handleSquareClick(r, c));
+        }
+        boardEl.appendChild(sq);
+      }
+    }
+  }
+
+  function handleSquareClick(r, c) {
+    if (gameOver || turn !== 'player') return;
+    const piece = board[r][c];
+
+    if (selected) {
+      const { steps, jumps } = getMoves(selected[0], selected[1]);
+      const jumpMove = jumps.find((j) => j.to[0] === r && j.to[1] === c);
+      const stepMove = steps.find((s) => s.to[0] === r && s.to[1] === c);
+      const legalMoves = allMovesFor('player');
+      const mustJump = legalMoves.some((m) => m.isJump);
+
+      if (jumpMove) {
+        applyMove({ from: selected, to: jumpMove.to, captured: jumpMove.captured });
+        const again = getMoves(jumpMove.to[0], jumpMove.to[1]).jumps.length > 0;
+        if (again) {
+          selected = jumpMove.to;
+          render();
+          statusEl.textContent = 'Jump again!';
+          if (!checkGameOver()) return;
+          return;
+        }
+        selected = null;
+        if (checkGameOver()) { render(); return; }
+        endPlayerTurn();
+        return;
+      }
+
+      if (stepMove && !mustJump) {
+        applyMove({ from: selected, to: stepMove.to });
+        selected = null;
+        if (checkGameOver()) { render(); return; }
+        endPlayerTurn();
+        return;
+      }
+
+      if (piece && piece.color === 'player') {
+        selected = [r, c];
+        render();
+        return;
+      }
+
+      selected = null;
+      render();
+      return;
+    }
+
+    if (piece && piece.color === 'player') {
+      selected = [r, c];
+      render();
+    }
+  }
+
+  function endPlayerTurn() {
+    turn = 'cpu';
+    statusEl.textContent = "CPU's turn...";
+    render();
+    setTimeout(cpuTurn, 700);
+  }
+
+  function cpuTurn() {
+    if (gameOver) return;
+    const moves = allMovesFor('cpu');
+    if (moves.length === 0) { checkGameOver(); return; }
+    const move = moves[Math.floor(Math.random() * moves.length)];
+    applyMove(move);
+
+    if (move.isJump) {
+      const more = getMoves(move.to[0], move.to[1]).jumps;
+      if (more.length > 0) {
+        render();
+        setTimeout(cpuTurn, 500);
+        return;
+      }
+    }
+
+    if (checkGameOver()) { render(); return; }
+    turn = 'player';
+    statusEl.textContent = 'Your turn — pick a gold piece.';
+    render();
+  }
+
+  function startGame() {
+    board = initBoard();
+    turn = 'player';
+    selected = null;
+    gameOver = false;
+    statusEl.textContent = 'Your turn — pick a gold piece.';
+    overlay.classList.add('hidden');
+    countPieces();
+    render();
+  }
+
+  restartBtn.addEventListener('click', startGame);
+  startGame();
+})();
+</script>
 </body>
 </html>

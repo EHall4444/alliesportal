@@ -9,20 +9,53 @@
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../style.css">
 <link rel="stylesheet" href="games.css">
+<style>
+  .ttt-board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    width: 100%;
+    max-width: 320px;
+    aspect-ratio: 1;
+  }
+  .ttt-cell {
+    background: var(--panel);
+    border: 3px solid var(--gold);
+    color: var(--green);
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(1.5rem, 8vw, 2.5rem);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .ttt-cell[data-mark="X"] { color: var(--gold); }
+  .ttt-cell:disabled { cursor: default; }
+  .ttt-status {
+    color: var(--gold);
+    font-size: 0.7rem;
+    text-align: center;
+    min-height: 1.5em;
+  }
+</style>
 </head>
 <body>
 
   <header class="site-header">
-    <h1 class="title">❌ Tic Tac Toe<span class="cursor">_</span></h1>
-    <p class="subtitle">LOADING CARTRIDGE...</p>
+    <h1 class="title">❌ TIC TAC TOE<span class="cursor">_</span></h1>
+    <p class="subtitle">YOU'RE X. CPU IS O.</p>
   </header>
 
   <main class="game-main">
-    <div class="game-stage" style="max-width:480px;">
-      <div class="countdown-next pixel-panel">
-        <span class="countdown-next-icon">🚧</span>
-        <span class="countdown-next-name">COMING SOON</span>
-        <p class="countdown-next-detail">Tic Tac Toe is still being built. Check back soon, Player 1!</p>
+    <p class="ttt-status" id="status">Your move.</p>
+
+    <div class="game-stage">
+      <div class="ttt-board" id="board"></div>
+
+      <div class="game-overlay hidden" id="overlay">
+        <h2 id="overlay-title">GAME OVER</h2>
+        <p id="overlay-message"></p>
+        <button class="game-btn" id="restart-btn">PLAY AGAIN</button>
       </div>
     </div>
 
@@ -33,5 +66,120 @@
     <p class="footer-text">ALASTAIR'S WORLD</p>
   </footer>
 
+<script>
+(function () {
+  const boardEl = document.getElementById('board');
+  const statusEl = document.getElementById('status');
+  const overlay = document.getElementById('overlay');
+  const overlayTitle = document.getElementById('overlay-title');
+  const overlayMessage = document.getElementById('overlay-message');
+  const restartBtn = document.getElementById('restart-btn');
+
+  const LINES = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6],
+  ];
+
+  let cells, gameOver;
+
+  function checkWinner(state) {
+    for (const [a,b,c] of LINES) {
+      if (state[a] && state[a] === state[b] && state[a] === state[c]) return state[a];
+    }
+    if (state.every((v) => v)) return 'draw';
+    return null;
+  }
+
+  function minimax(state, player) {
+    const winner = checkWinner(state);
+    if (winner === 'O') return { score: 1 };
+    if (winner === 'X') return { score: -1 };
+    if (winner === 'draw') return { score: 0 };
+
+    const moves = [];
+    for (let i = 0; i < 9; i++) {
+      if (state[i]) continue;
+      const next = state.slice();
+      next[i] = player;
+      const result = minimax(next, player === 'O' ? 'X' : 'O');
+      moves.push({ index: i, score: result.score });
+    }
+
+    if (player === 'O') {
+      return moves.reduce((best, m) => (m.score > best.score ? m : best));
+    }
+    return moves.reduce((best, m) => (m.score < best.score ? m : best));
+  }
+
+  function render() {
+    boardEl.querySelectorAll('.ttt-cell').forEach((btn, i) => {
+      btn.textContent = cells[i] || '';
+      btn.dataset.mark = cells[i] || '';
+      btn.disabled = !!cells[i] || gameOver;
+    });
+  }
+
+  function endGame(winner) {
+    gameOver = true;
+    render();
+    if (winner === 'draw') {
+      overlayTitle.textContent = "IT'S A DRAW";
+      overlayMessage.textContent = 'Nobody wins this round.';
+    } else if (winner === 'X') {
+      overlayTitle.textContent = 'YOU WIN!';
+      overlayMessage.textContent = 'Nice moves, Player 1.';
+    } else {
+      overlayTitle.textContent = 'CPU WINS';
+      overlayMessage.textContent = 'Better luck next time.';
+    }
+    overlay.classList.remove('hidden');
+  }
+
+  function cpuMove() {
+    const { index } = minimax(cells, 'O');
+    cells[index] = 'O';
+    const winner = checkWinner(cells);
+    render();
+    if (winner) {
+      endGame(winner);
+    } else {
+      statusEl.textContent = 'Your move.';
+    }
+  }
+
+  function handleCellClick(i) {
+    if (gameOver || cells[i]) return;
+    cells[i] = 'X';
+    const winner = checkWinner(cells);
+    render();
+    if (winner) {
+      endGame(winner);
+      return;
+    }
+    statusEl.textContent = "CPU's move...";
+    setTimeout(cpuMove, 400);
+  }
+
+  function startGame() {
+    cells = Array(9).fill(null);
+    gameOver = false;
+    statusEl.textContent = 'Your move.';
+    overlay.classList.add('hidden');
+    render();
+  }
+
+  boardEl.innerHTML = '';
+  for (let i = 0; i < 9; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'ttt-cell';
+    btn.addEventListener('click', () => handleCellClick(i));
+    boardEl.appendChild(btn);
+  }
+
+  restartBtn.addEventListener('click', startGame);
+  startGame();
+})();
+</script>
 </body>
 </html>

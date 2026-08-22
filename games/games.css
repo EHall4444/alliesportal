@@ -113,6 +113,19 @@
   background: var(--green);
 }
 
+.game-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.game-btn:disabled:hover {
+  background: var(--panel);
+}
+
+.game-btn:disabled:hover::before {
+  background: var(--gold);
+}
+
 .dpad {
   display: grid;
   grid-template-columns: repeat(3, 52px);
