@@ -81,6 +81,143 @@ main {
   gap: 48px;
 }
 
+/* ---------- Pixel panel helper ---------- */
+
+.pixel-panel {
+  position: relative;
+  background: var(--panel);
+  clip-path: polygon(
+    0 var(--step), var(--step) var(--step), var(--step) 0,
+    calc(100% - var(--step)) 0, calc(100% - var(--step)) var(--step), 100% var(--step),
+    100% calc(100% - var(--step)), calc(100% - var(--step)) calc(100% - var(--step)), calc(100% - var(--step)) 100%,
+    var(--step) 100%, var(--step) calc(100% - var(--step)), 0 calc(100% - var(--step))
+  );
+}
+
+.pixel-panel::before {
+  content: "";
+  position: absolute;
+  inset: calc(var(--border) * -1);
+  background: var(--gold);
+  clip-path: polygon(
+    0 var(--step), var(--step) var(--step), var(--step) 0,
+    calc(100% - var(--step)) 0, calc(100% - var(--step)) var(--step), 100% var(--step),
+    100% calc(100% - var(--step)), calc(100% - var(--step)) calc(100% - var(--step)), calc(100% - var(--step)) 100%,
+    var(--step) 100%, var(--step) calc(100% - var(--step)), 0 calc(100% - var(--step))
+  );
+  z-index: -1;
+}
+
+/* ---------- Countdown ---------- */
+
+.countdown {
+  text-align: center;
+}
+
+.countdown-title {
+  color: var(--gold);
+  font-size: clamp(0.9rem, 3.5vw, 1.3rem);
+  text-shadow: 0 0 6px rgba(255, 204, 51, 0.6);
+  margin: 0 0 20px;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.countdown-next {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 20px;
+  margin: 0 auto 32px;
+  max-width: 480px;
+}
+
+.countdown-next-icon {
+  font-size: 2.5rem;
+}
+
+.countdown-next-name {
+  color: var(--gold);
+  font-size: clamp(0.8rem, 3vw, 1.1rem);
+  text-shadow: 0 0 4px rgba(255, 204, 51, 0.5);
+}
+
+.countdown-clock {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 8px 0;
+}
+
+.clock-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: var(--panel-light);
+  padding: 10px 8px;
+  min-width: 56px;
+}
+
+.clock-value {
+  color: var(--green);
+  font-size: clamp(1rem, 4vw, 1.4rem);
+  text-shadow: 0 0 4px rgba(57, 255, 106, 0.6);
+}
+
+.clock-label {
+  color: var(--gold);
+  font-size: 0.45rem;
+}
+
+.countdown-next-detail {
+  color: var(--green);
+  font-size: 0.6rem;
+  text-shadow: 0 0 4px rgba(57, 255, 106, 0.5);
+  min-height: 1em;
+  margin: 4px 0 0;
+}
+
+.countdown-subtitle {
+  color: var(--green);
+  font-size: clamp(0.6rem, 2.5vw, 0.8rem);
+  text-shadow: 0 0 4px rgba(57, 255, 106, 0.5);
+  margin: 0 0 20px;
+}
+
+.countdown-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.countdown-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 10px;
+  font-size: 0.55rem;
+  line-height: 1.5;
+}
+
+.countdown-item-icon {
+  font-size: 1.5rem;
+}
+
+.countdown-item-days {
+  color: var(--green);
+}
+
 /* ---------- Main menu ---------- */
 
 .menu-grid {
@@ -266,6 +403,10 @@ main {
 
   .menu-btn--wide {
     grid-column: auto;
+  }
+
+  .countdown-list {
+    grid-template-columns: 1fr;
   }
 
   .crew-card {
